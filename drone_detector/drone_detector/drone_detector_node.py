@@ -26,10 +26,10 @@ class DroneInferenceNode(Node):
         )
 
         # 发布无人机角度的Float32MultiArray（仅包含x, y, tilt）
-        self.angle_pub_ = self.create_publisher(Float32MultiArray, 'SMX/GimbalAngularVelocityCmd', 10)
+        self.angle_pub_ = self.create_publisher(Float32MultiArray, 'SMX/TargetImageAngle', 10)
 
         # 发布带有绿色标记的视频图像
-        self.video_pub_ = self.create_publisher(Image, 'SMX/Target_Video', 10)
+        self.video_pub_ = self.create_publisher(Image, 'SMX/TargetImage', 10)
 
         self.bridge = CvBridge()
         self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
