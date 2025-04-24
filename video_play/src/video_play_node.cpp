@@ -11,8 +11,8 @@ class VideoPlayNode : public rclcpp::Node
 public:
   VideoPlayNode() : Node("video_play_node")
   {
-    // 创建发布器，发布到 SMX/Gimbal_Camera 话题
-    publisher_ = this->create_publisher<sensor_msgs::msg::Image>("SMX/Gimbal_Camera", 10);
+    // 创建发布器，发布到 SMX/GimbalCamera 话题
+    publisher_ = this->create_publisher<sensor_msgs::msg::Image>("SMX/GimbalCamera", 10);
 
     // 视频文件路径（请确保文件存在且权限正确）
     std::string video_path = "/home/smx/NetworkShare/Video1_4.mp4";

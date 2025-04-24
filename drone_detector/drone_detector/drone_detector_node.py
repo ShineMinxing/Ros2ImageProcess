@@ -20,13 +20,13 @@ class DroneInferenceNode(Node):
         # 订阅原始图像话题
         self.image_sub_ = self.create_subscription(
             Image,
-            'SMX/Gimbal_Camera',  # 原始图像话题
+            'SMX/GimbalCamera',  # 原始图像话题
             self.image_callback,
             10
         )
 
         # 发布无人机角度的Float32MultiArray（仅包含x, y, tilt）
-        self.angle_pub_ = self.create_publisher(Float32MultiArray, 'SMX/Target_Angle', 10)
+        self.angle_pub_ = self.create_publisher(Float32MultiArray, 'SMX/GimbalAngularVelocityCmd', 10)
 
         # 发布带有绿色标记的视频图像
         self.video_pub_ = self.create_publisher(Image, 'SMX/Target_Video', 10)

@@ -12,14 +12,14 @@ public:
   {
     // 订阅图像话题
     image_sub_ = this->create_subscription<sensor_msgs::msg::Image>(
-      "SMX/Gimbal_Camera", 10,
+      "SMX/GimbalCamera", 10,
       std::bind(&SpotDetectorNode::imageCallback, this, std::placeholders::_1));
 
     // 发布标记后的视频图像
     video_pub_ = this->create_publisher<sensor_msgs::msg::Image>("SMX/Target_Video", 10);
 
     // 发布角度信息，数据为 [angle_x_deg, angle_y_deg, tilt_deg]
-    angle_pub_ = this->create_publisher<std_msgs::msg::Float32MultiArray>("SMX/Target_Angle", 10);
+    angle_pub_ = this->create_publisher<std_msgs::msg::Float32MultiArray>("SMX/GimbalAngularVelocityCmd", 10);
 
     // 设置相机的水平和垂直视场（单位：度）
     fov_h_ = 125.0;
@@ -50,9 +50,9 @@ private:
 
     // 检测蓝光点：要求 B > 150 且 B 大于 R 和 G
     bool found = false;
-    int max_b_value = -1;
-    int max_b_x = -1;
-    int max_b_y = -1;
+    int max_b_value = 0;
+    int max_b_x = 0;
+    int max_b_y = 0;
 
     for (int y = 0; y < height; y++) {
       const uchar* row_ptr = frame.ptr<uchar>(y);
@@ -62,9 +62,9 @@ private:
         int r = row_ptr[x * 3 + 2];
 
         // 满足条件：B 大于 150 且 B > R 且 B > G
-        if (b > 150 && b > (r+80) && b > (g+80)) {
+        if (b > 200 && b > (r+75) && b > (g+75)) {
           if (b > max_b_value) {
-            max_b_value = b;
+            max_b_value = (b-r)*(b-r)+(b-g)*(b-g);
             max_b_x = x;
             max_b_y = y;
             found = true;
@@ -96,7 +96,7 @@ private:
     auto out_msg = cv_bridge::CvImage(msg->header, "bgr8", frame).toImageMsg();
     video_pub_->publish(*out_msg);
 
-    // 组装角度信息并发布到 SMX/Target_Angle (Float32MultiArray)
+    // 组装角度信息并发布到 SMX/GimbalAngularVelocityCmd (Float32MultiArray)
     std_msgs::msg::Float32MultiArray angle_msg;
     angle_msg.data.push_back(static_cast<float>(angle_x_deg));
     angle_msg.data.push_back(static_cast<float>(angle_y_deg));
