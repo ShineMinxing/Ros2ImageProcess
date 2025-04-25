@@ -12,7 +12,7 @@ public:
   {
     // 订阅图像话题
     image_sub_ = this->create_subscription<sensor_msgs::msg::Image>(
-      "/SMX/Go2Camera", 10,
+      "/SMX/GimbalCamera", 10,
       std::bind(&SpotDetectorNode::imageCallback, this, std::placeholders::_1));
 
     // 发布标记后的视频图像
@@ -62,9 +62,9 @@ private:
         int r = row_ptr[x * 3 + 2];
 
         // 满足条件：B 大于 150 且 B > R 且 B > G
-        if (b > 200 && b > (r+100) && b > (g+100)) {
+        if (b > 200 && b > (r+50) && b > (g+50)) {
           if (b > max_b_value) {
-            max_b_value = b+(b-r)+(b-g);
+            max_b_value = b;
             max_b_x = x;
             max_b_y = y;
             found = true;
