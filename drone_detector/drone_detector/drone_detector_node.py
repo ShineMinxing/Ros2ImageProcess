@@ -3,7 +3,7 @@ import rclpy
 from rclpy.node import Node
 
 from sensor_msgs.msg import Image
-from std_msgs.msg import Float32MultiArray
+from std_msgs.msg import Float64MultiArray
 
 import torch
 from torchvision import models, transforms
@@ -25,8 +25,8 @@ class DroneInferenceNode(Node):
             10
         )
 
-        # 发布无人机角度的Float32MultiArray（仅包含x, y, tilt）
-        self.angle_pub_ = self.create_publisher(Float32MultiArray, 'SMX/TargetImageAngle', 10)
+        # 发布无人机角度的Float64MultiArray（仅包含x, y, tilt）
+        self.angle_pub_ = self.create_publisher(Float64MultiArray, 'SMX/TargetImageAngle', 10)
 
         # 发布带有绿色标记的视频图像
         self.video_pub_ = self.create_publisher(Image, 'SMX/TargetImage', 10)
@@ -106,7 +106,7 @@ class DroneInferenceNode(Node):
         tilt_deg = tilt * (180.0 / math.pi)
 
         # 组装角度信息并发布：依次为水平角、垂直角、倾角
-        angle_msg = Float32MultiArray()
+        angle_msg = Float64MultiArray()
         angle_msg.data = [angle_x_deg, angle_y_deg, tilt_deg]
         self.angle_pub_.publish(angle_msg)
 

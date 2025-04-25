@@ -1,6 +1,6 @@
 #include <rclcpp/rclcpp.hpp>
 #include <sensor_msgs/msg/image.hpp>
-#include <std_msgs/msg/float32_multi_array.hpp>
+#include <std_msgs/msg/float64_multi_array.hpp>
 #include <cv_bridge/cv_bridge.h>
 #include <opencv2/opencv.hpp>
 
@@ -19,7 +19,7 @@ public:
     video_pub_ = this->create_publisher<sensor_msgs::msg::Image>("SMX/TargetImage", 10);
 
     // 发布角度信息，数据为 [angle_x_deg, angle_y_deg, tilt_deg]
-    angle_pub_ = this->create_publisher<std_msgs::msg::Float32MultiArray>("SMX/TargetImageAngle", 10);
+    angle_pub_ = this->create_publisher<std_msgs::msg::Float64MultiArray>("SMX/TargetImageAngle", 10);
 
     // 设置相机的水平和垂直视场（单位：度）
     fov_h_ = 125.0;
@@ -94,11 +94,11 @@ private:
       auto out_msg = cv_bridge::CvImage(msg->header, "bgr8", frame).toImageMsg();
       video_pub_->publish(*out_msg);
 
-      // 组装角度信息并发布到 SMX/TargetImageAngle (Float32MultiArray)
-      std_msgs::msg::Float32MultiArray angle_msg;
-      angle_msg.data.push_back(static_cast<float>(angle_x_deg));
-      angle_msg.data.push_back(static_cast<float>(angle_y_deg));
-      angle_msg.data.push_back(static_cast<float>(tilt_deg));
+      // 组装角度信息并发布到 SMX/TargetImageAngle (Float64MultiArray)
+      std_msgs::msg::Float64MultiArray angle_msg;
+      angle_msg.data.push_back(static_cast<double>(angle_x_deg));
+      angle_msg.data.push_back(static_cast<double>(angle_y_deg));
+      angle_msg.data.push_back(static_cast<double>(tilt_deg));
       angle_pub_->publish(angle_msg);
 
     }
@@ -106,7 +106,7 @@ private:
 
   rclcpp::Subscription<sensor_msgs::msg::Image>::SharedPtr image_sub_;
   rclcpp::Publisher<sensor_msgs::msg::Image>::SharedPtr video_pub_;
-  rclcpp::Publisher<std_msgs::msg::Float32MultiArray>::SharedPtr angle_pub_;
+  rclcpp::Publisher<std_msgs::msg::Float64MultiArray>::SharedPtr angle_pub_;
   double fov_h_;
   double fov_v_;
 };
