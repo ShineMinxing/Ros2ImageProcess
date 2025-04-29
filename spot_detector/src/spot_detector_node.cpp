@@ -51,11 +51,11 @@ private:
       return;
     }
 
-    // 检测蓝光点：要求 B > 150 且 B 大于 R 和 G
+    // 检测绿光点：要求 B > 150 且 B 大于 R 和 G
     bool found = false;
-    int max_b_value = 0;
-    int max_b_x = 0;
-    int max_b_y = 0;
+    int max_g_value = 0;
+    int max_g_x = 0;
+    int max_g_y = 0;
 
     for (int y = 0; y < height; y++) {
       const uchar* row_ptr = frame.ptr<uchar>(y);
@@ -65,26 +65,26 @@ private:
         int r = row_ptr[x * 3 + 2];
 
         // 满足条件：B 大于 150 且 B > R 且 B > G
-        if (b > 200 && b > (r+50) && b > (g+50)) {
-          if (b > max_b_value) {
-            max_b_value = b;
-            max_b_x = x;
-            max_b_y = y;
+        if (g > 200 && g > (r+50) && g > (b+50)) {
+          if (b > max_g_value) {
+            max_g_value = g;
+            max_g_x = x;
+            max_g_y = y;
             found = true;
           }
         }
       }
     }
 
-    // 如果检测到蓝光点，则计算角度；否则角度均返回 0
+    // 如果检测到绿光点，则计算角度；否则角度均返回 0
     double angle_x_deg = 0.0, angle_y_deg = 0.0, tilt_deg = 0.0;
     if (found) {
       // 在图像上画一个绿色圆圈标记该点
-      cv::circle(frame, cv::Point(max_b_x, max_b_y), 10, cv::Scalar(0, 255, 0), 2);
+      cv::circle(frame, cv::Point(max_g_x, max_g_y), 10, cv::Scalar(0, 255, 0), 2);
 
       // 计算该点相对于图像中心的偏移
-      double dx = static_cast<double>(max_b_x) - (width / 2.0);
-      double dy = static_cast<double>(max_b_y) - (height / 2.0);
+      double dx = static_cast<double>(max_g_x) - (width / 2.0);
+      double dy = static_cast<double>(max_g_y) - (height / 2.0);
       double ratio_x = dx / (width / 2.0);   // 范围 -1 ~ +1
       double ratio_y = - dy / (height / 2.0);    // 范围 -1 ~ +1
 
