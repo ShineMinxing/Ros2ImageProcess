@@ -11,8 +11,11 @@ public:
   : Node("spot_detector_node")
   {
     // 订阅图像话题
+    // image_sub_ = this->create_subscription<sensor_msgs::msg::Image>(
+    //   "/SMX/GimbalCamera", 10,
+    //   std::bind(&SpotDetectorNode::imageCallback, this, std::placeholders::_1));
     image_sub_ = this->create_subscription<sensor_msgs::msg::Image>(
-      "/SMX/GimbalCamera", 10,
+      "/SMX/Go2Camera", 10,
       std::bind(&SpotDetectorNode::imageCallback, this, std::placeholders::_1));
 
     // 发布标记后的视频图像
