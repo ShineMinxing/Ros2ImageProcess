@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
-import os, glob
+import os
+import glob
 import rclpy
 from rclpy.node import Node
 from cv_bridge import CvBridge
@@ -9,12 +10,14 @@ from ament_index_python.packages import get_package_share_directory
 import cv2
 import face_recognition
 import numpy as np
+from pathlib import Path
 
 class FaceRecognitionNode(Node):
-    def __init__(self, options=None):
-        super().__init__('face_check_node', options=options)
+    def __init__(self, *, cli_args=None):
+        # Pass CLI args (including --params-file) into the Node
+        super().__init__('face_check_node', cli_args=cli_args)
 
-        # 声明并获取参数
+        # Declare and read parameters from the loaded YAML
         self.image_input_topic = self.declare_parameter(
             'IMAGE_INPUT_TOPIC', '/SMX/GimbalCamera').value
         self.name_output_topic = self.declare_parameter(
@@ -23,22 +26,25 @@ class FaceRecognitionNode(Node):
             'IMAGE_OUTPUT_TOPIC', '/SMX/TargetImage').value
         self.angle_output_topic = self.declare_parameter(
             'ANGLE_OUTPUT_TOPIC', '/SMX/TargetImageAngle').value
+
         self.fov_h = float(self.declare_parameter('FOV_H', 125.0).value)
         self.fov_v = float(self.declare_parameter('FOV_V',  69.0).value)
         self.face_lib_dirs = self.declare_parameter(
             'FACE_LIB_DIRS', ['other','local_file']).value
 
-        # 创建订阅 & 发布
+        # Create subscriber & publishers
         self.image_sub = self.create_subscription(
             Image, self.image_input_topic, self.image_cb, 10)
-        self.name_pub  = self.create_publisher(String,             self.name_output_topic,  10)
-        self.image_pub = self.create_publisher(Image,              self.image_output_topic, 10)
-        self.angle_pub = self.create_publisher(Float64MultiArray, self.angle_output_topic, 10)
+        self.name_pub  = self.create_publisher(
+            String, self.name_output_topic, 10)
+        self.image_pub = self.create_publisher(
+            Image, self.image_output_topic, 10)
+        self.angle_pub = self.create_publisher(
+            Float64MultiArray, self.angle_output_topic, 10)
 
         self.bridge = CvBridge()
-        self.frame_id = 0
 
-        # 加载人脸库
+        # Load face library from package share
         pkg_share = get_package_share_directory('face_check')
         self.known_encodings = []
         self.known_names     = []
@@ -57,42 +63,60 @@ class FaceRecognitionNode(Node):
         self.get_logger().info(f'Total loaded faces: {len(self.known_names)}')
 
     def image_cb(self, msg: Image):
-        self.frame_id += 1
-        if self.frame_id % 3 != 0:
-            return
+
         frame = self.bridge.imgmsg_to_cv2(msg, desired_encoding='bgr8')
         if frame is None:
             self.get_logger().warn('Empty image frame')
             return
-        rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+
+        scale = 2
+        new_frame = cv2.resize(frame, (0, 0), fx=1/scale, fy=1/scale)
+        rgb = cv2.cvtColor(new_frame, cv2.COLOR_BGR2RGB)
         locs = face_recognition.face_locations(rgb)
         encs = face_recognition.face_encodings(rgb, locs)
-        h, w = frame.shape[:2]
-        for (top,right,bottom,left), enc in zip(locs, encs):
+        h, w = new_frame.shape[:2]
+
+        for (top, right, bottom, left), enc in zip(locs, encs):
             dists = face_recognition.face_distance(self.known_encodings, enc)
             idx = np.argmin(dists) if len(dists) else None
-            name = self.known_names[idx] if (idx is not None and dists[idx]<0.55) else 'Unknown'
-            cv2.rectangle(frame, (left,top),(right,bottom),(0,255,0),2)
-            cv2.putText(frame,name,(left,top-10),cv2.FONT_HERSHEY_SIMPLEX,0.7,(0,255,0),2)
-            cx = (left+right)/2.0; cy = (top+bottom)/2.0
-            rx = (cx - w/2.0)/(w/2.0); ry = -(cy - h/2.0)/(h/2.0)
-            ang_x = rx*(self.fov_h/2.0); ang_y = ry*(self.fov_v/2.0)
-            # 发布
+            name = self.known_names[idx] if (idx is not None and dists[idx] < 0.55) else 'Unknown'
+
+            # draw box and name
+            cv2.rectangle(new_frame, (left, top), (right, bottom), (0, 255, 0), 2)
+            cv2.putText(new_frame, name, (left, top - 10),
+                        cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 255, 0), 2)
+
+            # compute angles
+            cx = (left + right) / 2.0
+            cy = (top + bottom) / 2.0
+            rx = (cx - w / 2.0) / (w / 2.0)    # -1~1
+            ry = -(cy - h / 2.0) / (h / 2.0)   # -1~1
+            ang_x = rx * (self.fov_h / 2.0)
+            ang_y = ry * (self.fov_v / 2.0)
+
+            # publish name and angle
             self.name_pub.publish(String(data=name))
-            a = Float64MultiArray(); a.data=[float(ang_x), float(ang_y), 0.0]
+            a = Float64MultiArray()
+            a.data = [float(ang_x), float(ang_y), 0.0]
             self.angle_pub.publish(a)
-        # 发布标记后图像
-        self.image_pub.publish(self.bridge.cv2_to_imgmsg(frame,'bgr8'))
+
+        # publish annotated image
+        self.image_pub.publish(self.bridge.cv2_to_imgmsg(new_frame, 'bgr8'))
 
 
 def main():
     rclpy.init()
-    # 加载相对路径的 config.yaml
-    options = rclpy.node.NodeOptions()
-    options.arguments([ '--ros-args',
-                        '--params-file',
-                        'src/Ros2ImageProcess/config.yaml' ])
-    node = FaceRecognitionNode(options)
+
+    # Build the path to your YAML relative to the workspace root
+    config_file = os.path.abspath(
+        os.path.join(os.getcwd(), 'src', 'Ros2ImageProcess', 'config.yaml'))
+
+    # Pass the params-file argument into the node via cli_args
+    cli_args = [
+        '--ros-args',
+        '--params-file', config_file
+    ]
+    node = FaceRecognitionNode(cli_args=cli_args)
     rclpy.spin(node)
     node.destroy_node()
     rclpy.shutdown()
