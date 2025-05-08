@@ -16,7 +16,7 @@ public:
     std::string video_path = this->declare_parameter<std::string>(
       "VIDEO_FILE_PATH", "/home/smx/NetworkShare/Video1_4.mp4");
     std::string image_topic = this->declare_parameter<std::string>(
-      "IMAGE_TOPIC", "SMX/GimbalCamera");
+      "IMAGE_TOPIC", "TEST/GimbalCamera");
     int publish_fps = this->declare_parameter<int>(
       "PUBLISH_FPS", 30);
 
@@ -73,7 +73,7 @@ int main(int argc, char ** argv)
   options.arguments({
     "--ros-args",
     "--params-file",
-    "src/Ros2ImageProcess/config.yaml"
+    "/home/smx/ros2_ws/LeggedRobot/src/Ros2ImageProcess/config.yaml"
   });
   auto node = std::make_shared<VideoPlayNode>(options);
   rclcpp::spin(node);

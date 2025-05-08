@@ -18,11 +18,11 @@ class DroneInferenceNode(Node):
 
         # 读取参数
         self.image_input_topic = self.declare_parameter(
-            'IMAGE_INPUT_TOPIC', '/SMX/GimbalCamera').value
+            'IMAGE_INPUT_TOPIC', '/TEST/GimbalCamera').value
         self.angle_output_topic = self.declare_parameter(
-            'ANGLE_OUTPUT_TOPIC', '/SMX/TargetImageAngle').value
+            'ANGLE_OUTPUT_TOPIC', '/TEST/TargetImageAngle').value
         self.image_output_topic = self.declare_parameter(
-            'IMAGE_OUTPUT_TOPIC', '/SMX/TargetImage').value
+            'IMAGE_OUTPUT_TOPIC', '/TEST/TargetImage').value
         rel_model_path = self.declare_parameter(
             'MODEL_REL_PATH', 'resource/drone_model_best_0.pth').value
         self.fov_h = float(self.declare_parameter('FOV_H', 125.0).value)
@@ -102,7 +102,7 @@ def main(args=None):
     rclpy.init(args=args)
     # 通过 NodeOptions 加载相对 config.yaml
     opts = rclpy.node.NodeOptions()
-    opts.arguments([ '--ros-args', '--params-file', 'src/Ros2ImageProcess/config.yaml' ])
+    opts.arguments([ '--ros-args', '--params-file', '/home/smx/ros2_ws/LeggedRobot/src/Ros2ImageProcess/config.yaml' ])
     node = DroneInferenceNode(options=opts)
     rclpy.spin(node)
     node.destroy_node()
