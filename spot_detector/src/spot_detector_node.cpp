@@ -4,120 +4,103 @@
 #include <cv_bridge/cv_bridge.h>
 #include <opencv2/opencv.hpp>
 
+using namespace std::chrono_literals;
+
 class SpotDetectorNode : public rclcpp::Node
 {
 public:
-  SpotDetectorNode()
-  : Node("spot_detector_node")
+  explicit SpotDetectorNode(const rclcpp::NodeOptions & options)
+  : Node("spot_detector_node", options)
   {
-    // 订阅图像话题
-    // image_sub_ = this->create_subscription<sensor_msgs::msg::Image>(
-    //   "/SMX/GimbalCamera", 10,
-    //   std::bind(&SpotDetectorNode::imageCallback, this, std::placeholders::_1));
+    // 声明并获取参数
+    input_topic_ = this->declare_parameter<std::string>(
+      "IMAGE_INPUT_TOPIC", "/SMX/Go2Camera");
+    output_image_topic_ = this->declare_parameter<std::string>(
+      "IMAGE_OUTPUT_TOPIC", "/SMX/TargetImage");
+    output_angle_topic_ = this->declare_parameter<std::string>(
+      "ANGLE_OUTPUT_TOPIC", "/SMX/TargetImageAngle");
+    fov_h_ = this->declare_parameter<double>("FOV_H", 125.0);
+    fov_v_ = this->declare_parameter<double>("FOV_V",  69.0);
+
+    // 订阅图像
     image_sub_ = this->create_subscription<sensor_msgs::msg::Image>(
-      "/SMX/Go2Camera", 10,
+      input_topic_, 10,
       std::bind(&SpotDetectorNode::imageCallback, this, std::placeholders::_1));
 
-    // 发布标记后的视频图像
-    video_pub_ = this->create_publisher<sensor_msgs::msg::Image>("SMX/TargetImage", 10);
+    // 发布处理后图像
+    video_pub_ = this->create_publisher<sensor_msgs::msg::Image>(
+      output_image_topic_, 10);
 
-    // 发布角度信息，数据为 [angle_x_deg, angle_y_deg, tilt_deg]
-    angle_pub_ = this->create_publisher<std_msgs::msg::Float64MultiArray>("SMX/TargetImageAngle", 10);
+    // 发布角度信息
+    angle_pub_ = this->create_publisher<std_msgs::msg::Float64MultiArray>(
+      output_angle_topic_, 10);
 
-    // 设置相机的水平和垂直视场（单位：度）
-    fov_h_ = 125.0;
-    fov_v_ = 69.0;
-
-    RCLCPP_INFO(this->get_logger(), "SpotDetectorNode 启动成功。");
+    RCLCPP_INFO(this->get_logger(),
+      "SpotDetectorNode 启动： in=%s out_img=%s out_ang=%s FOV=(%.1f,%.1f)",
+      input_topic_.c_str(), output_image_topic_.c_str(),
+      output_angle_topic_.c_str(), fov_h_, fov_v_);
   }
 
 private:
   void imageCallback(const sensor_msgs::msg::Image::SharedPtr msg)
   {
-    // 将 ROS 图像消息转换为 OpenCV 格式（BGR）
-    cv_bridge::CvImagePtr cv_ptr;
-    try {
-      cv_ptr = cv_bridge::toCvCopy(msg, "bgr8");
-    } catch (cv_bridge::Exception & e) {
-      RCLCPP_ERROR(this->get_logger(), "cv_bridge 异常: %s", e.what());
-      return;
-    }
+    auto cv_ptr = cv_bridge::toCvCopy(msg, "bgr8");
     cv::Mat frame = cv_ptr->image;
-    int width = frame.cols;
-    int height = frame.rows;
+    int width = frame.cols, height = frame.rows;
+    if (frame.empty()) return;
 
-    if (frame.empty()) {
-      RCLCPP_WARN(this->get_logger(), "收到空帧！");
-      return;
-    }
-
-    // 检测绿光点：要求 B > 150 且 B 大于 R 和 G
     bool found = false;
-    int max_g_value = 0;
-    int max_g_x = 0;
-    int max_g_y = 0;
-
-    for (int y = 0; y < height; y++) {
-      const uchar* row_ptr = frame.ptr<uchar>(y);
-      for (int x = 0; x < width; x++) {
-        int b = row_ptr[x * 3 + 0];
-        int g = row_ptr[x * 3 + 1];
-        int r = row_ptr[x * 3 + 2];
-
-        // 满足条件：B 大于 150 且 B > R 且 B > G
-        if (g > 200 && g > (r+50) && g > (b+50)) {
-          if (b > max_g_value) {
-            max_g_value = g;
-            max_g_x = x;
-            max_g_y = y;
-            found = true;
-          }
+    int max_g = 0, mx=0, my=0;
+    for (int y=0; y<height; ++y) {
+      const uchar* row = frame.ptr<uchar>(y);
+      for (int x=0; x<width; ++x) {
+        int b=row[x*3], g=row[x*3+1], r=row[x*3+2];
+        if (g>200 && g>(r+50) && g>(b+50) && g>max_g) {
+          max_g=g; mx=x; my=y; found=true;
         }
       }
     }
 
-    // 如果检测到绿光点，则计算角度；否则角度均返回 0
-    double angle_x_deg = 0.0, angle_y_deg = 0.0, tilt_deg = 0.0;
     if (found) {
-      // 在图像上画一个绿色圆圈标记该点
-      cv::circle(frame, cv::Point(max_g_x, max_g_y), 10, cv::Scalar(0, 255, 0), 2);
+      cv::circle(frame, {mx,my}, 10, {0,255,0}, 2);
+      double dx = mx - width/2.0;
+      double dy = -(my - height/2.0);
+      double rx = dx / (width/2.0);
+      double ry = dy / (height/2.0);
+      double angle_x = rx * (fov_h_/2.0);
+      double angle_y = ry * (fov_v_/2.0);
 
-      // 计算该点相对于图像中心的偏移
-      double dx = static_cast<double>(max_g_x) - (width / 2.0);
-      double dy = static_cast<double>(max_g_y) - (height / 2.0);
-      double ratio_x = dx / (width / 2.0);   // 范围 -1 ~ +1
-      double ratio_y = - dy / (height / 2.0);    // 范围 -1 ~ +1
+      // 发布图像
+      auto out_img = cv_bridge::CvImage(msg->header, "bgr8", frame).toImageMsg();
+      video_pub_->publish(*out_img);
 
-      // 根据视场角计算角度（假设图像中心为 0°）
-      angle_x_deg = ratio_x * (fov_h_ / 2.0);
-      angle_y_deg = ratio_y * (fov_v_ / 2.0);
-      tilt_deg = 0.0;  // 此处未计算 tilt，可根据需要扩展
-
-      // 将修改后的图像发布到 SMX/TargetImage
-      auto out_msg = cv_bridge::CvImage(msg->header, "bgr8", frame).toImageMsg();
-      video_pub_->publish(*out_msg);
-
-      // 组装角度信息并发布到 SMX/TargetImageAngle (Float64MultiArray)
-      std_msgs::msg::Float64MultiArray angle_msg;
-      angle_msg.data.push_back(static_cast<double>(angle_x_deg));
-      angle_msg.data.push_back(static_cast<double>(angle_y_deg));
-      angle_msg.data.push_back(static_cast<double>(tilt_deg));
-      angle_pub_->publish(angle_msg);
-
+      // 发布角度
+      std_msgs::msg::Float64MultiArray ang;
+      ang.data = {angle_x, angle_y, 0.0};
+      angle_pub_->publish(ang);
     }
   }
 
+  // 参数
+  std::string input_topic_, output_image_topic_, output_angle_topic_;
+  double fov_h_, fov_v_;
+
+  // ROS interfaces
   rclcpp::Subscription<sensor_msgs::msg::Image>::SharedPtr image_sub_;
   rclcpp::Publisher<sensor_msgs::msg::Image>::SharedPtr video_pub_;
   rclcpp::Publisher<std_msgs::msg::Float64MultiArray>::SharedPtr angle_pub_;
-  double fov_h_;
-  double fov_v_;
 };
 
 int main(int argc, char ** argv)
 {
   rclcpp::init(argc, argv);
-  auto node = std::make_shared<SpotDetectorNode>();
+  rclcpp::NodeOptions opts;
+  opts.arguments({
+    "--ros-args",
+    "--params-file",
+    "src/Ros2ImageProcess/config.yaml"
+  });
+  auto node = std::make_shared<SpotDetectorNode>(opts);
   rclcpp::spin(node);
   rclcpp::shutdown();
   return 0;

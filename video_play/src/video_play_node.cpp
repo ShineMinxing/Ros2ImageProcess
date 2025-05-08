@@ -9,35 +9,43 @@ using namespace std::chrono_literals;
 class VideoPlayNode : public rclcpp::Node
 {
 public:
-  VideoPlayNode() : Node("video_play_node")
+  explicit VideoPlayNode(const rclcpp::NodeOptions & options)
+  : Node("video_play_node", options)
   {
-    // 创建发布器，发布到 SMX/GimbalCamera 话题
-    publisher_ = this->create_publisher<sensor_msgs::msg::Image>("SMX/GimbalCamera", 10);
+    // 声明并获取参数
+    std::string video_path = this->declare_parameter<std::string>(
+      "VIDEO_FILE_PATH", "/home/smx/NetworkShare/Video1_4.mp4");
+    std::string image_topic = this->declare_parameter<std::string>(
+      "IMAGE_TOPIC", "SMX/GimbalCamera");
+    int publish_fps = this->declare_parameter<int>(
+      "PUBLISH_FPS", 30);
 
-    // 视频文件路径（请确保文件存在且权限正确）
-    std::string video_path = "/home/smx/NetworkShare/Video1_4.mp4";
+    // 创建 Publisher
+    publisher_ = this->create_publisher<sensor_msgs::msg::Image>(
+      image_topic, 10);
+
+    // 打开视频文件
     cap_.open(video_path, cv::CAP_ANY);
     if (!cap_.isOpened()) {
       RCLCPP_ERROR(this->get_logger(), "无法打开视频文件: %s", video_path.c_str());
-    } else {
-      RCLCPP_INFO(this->get_logger(), "成功打开视频: %s", video_path.c_str());
+      return;
     }
+    RCLCPP_INFO(this->get_logger(), "成功打开视频: %s", video_path.c_str());
 
-    // 定时器：每33毫秒发布一帧（约30Hz）
-    timer_ = this->create_wall_timer(33ms, std::bind(&VideoPlayNode::timerCallback, this));
+    // 计算发布周期
+    auto period = std::chrono::milliseconds(1000 / publish_fps);
+    timer_ = this->create_wall_timer(
+      period, std::bind(&VideoPlayNode::timerCallback, this));
   }
 
 private:
   void timerCallback()
   {
-    if (!cap_.isOpened()) {
-      return;
-    }
+    if (!cap_.isOpened()) return;
 
     cv::Mat frame;
-    cap_ >> frame; // 读取一帧
+    cap_ >> frame;
     if (frame.empty()) {
-      // 如果视频读到末尾，循环回到起始位置
       cap_.set(cv::CAP_PROP_POS_FRAMES, 0);
       cap_ >> frame;
       if (frame.empty()) {
@@ -46,11 +54,11 @@ private:
       }
     }
 
-    // 将OpenCV图像转换为ROS图像消息
-    auto cv_img = cv_bridge::CvImage(std_msgs::msg::Header(), "bgr8", frame);
-    cv_img.header.stamp = this->now();
-    cv_img.header.frame_id = "gimbal_camera";
-    publisher_->publish(*cv_img.toImageMsg());
+    auto msg = cv_bridge::CvImage(
+      std_msgs::msg::Header(), "bgr8", frame).toImageMsg();
+    msg->header.stamp = this->now();
+    msg->header.frame_id = "video_play";
+    publisher_->publish(*msg);
   }
 
   rclcpp::Publisher<sensor_msgs::msg::Image>::SharedPtr publisher_;
@@ -61,7 +69,13 @@ private:
 int main(int argc, char ** argv)
 {
   rclcpp::init(argc, argv);
-  auto node = std::make_shared<VideoPlayNode>();
+  rclcpp::NodeOptions options;
+  options.arguments({
+    "--ros-args",
+    "--params-file",
+    "src/Ros2ImageProcess/config.yaml"
+  });
+  auto node = std::make_shared<VideoPlayNode>(options);
   rclcpp::spin(node);
   rclcpp::shutdown();
   return 0;
