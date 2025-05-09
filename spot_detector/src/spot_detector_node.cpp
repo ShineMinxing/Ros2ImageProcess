@@ -98,7 +98,7 @@ int main(int argc, char ** argv)
   opts.arguments({
     "--ros-args",
     "--params-file",
-    "/home/smx/ros2_ws/LeggedRobot/src/Ros2ImageProcess/config.yaml"
+    "/home/unitree/ros2_ws/LeggedRobot/src/Ros2ImageProcess/config.yaml"
   });
   auto node = std::make_shared<SpotDetectorNode>(opts);
   rclcpp::spin(node);

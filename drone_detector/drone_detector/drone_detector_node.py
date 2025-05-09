@@ -102,7 +102,7 @@ def main(args=None):
     rclpy.init(args=args)
     # 通过 NodeOptions 加载相对 config.yaml
     opts = rclpy.node.NodeOptions()
-    opts.arguments([ '--ros-args', '--params-file', '/home/smx/ros2_ws/LeggedRobot/src/Ros2ImageProcess/config.yaml' ])
+    opts.arguments([ '--ros-args', '--params-file', '/home/unitree/ros2_ws/LeggedRobot/src/Ros2ImageProcess/config.yaml' ])
     node = DroneInferenceNode(options=opts)
     rclpy.spin(node)
     node.destroy_node()

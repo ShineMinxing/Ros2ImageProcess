@@ -10,7 +10,7 @@ audio_play_node:
 spot_detector_node:
   ros__parameters:
     # 输入图像话题
-    IMAGE_INPUT_TOPIC:  "/SMX/Go2Camera"
+    IMAGE_INPUT_TOPIC:  "/SMX/GimbalCamera"
     # 标记后发布图像话题
     IMAGE_OUTPUT_TOPIC: "/SMX/TargetImage"
     # 发布角度信息的话题
