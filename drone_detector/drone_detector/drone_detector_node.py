@@ -18,11 +18,11 @@ class DroneInferenceNode(Node):
 
         # 读取参数
         self.image_input_topic = self.declare_parameter(
-            'IMAGE_INPUT_TOPIC', '/TEST/GimbalCamera').value
+            'IMAGE_INPUT_TOPIC', '/NoYamlRead/GimbalCamera').value
         self.angle_output_topic = self.declare_parameter(
-            'ANGLE_OUTPUT_TOPIC', '/TEST/TargetImageAngle').value
+            'ANGLE_OUTPUT_TOPIC', '/NoYamlRead/TargetImageAngle').value
         self.image_output_topic = self.declare_parameter(
-            'IMAGE_OUTPUT_TOPIC', '/TEST/TargetImage').value
+            'IMAGE_OUTPUT_TOPIC', '/NoYamlRead/TargetImage').value
         rel_model_path = self.declare_parameter(
             'MODEL_REL_PATH', 'resource/drone_model_best_0.pth').value
         self.fov_h = float(self.declare_parameter('FOV_H', 125.0).value)

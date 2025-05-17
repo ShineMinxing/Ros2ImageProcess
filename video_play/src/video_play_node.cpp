@@ -16,7 +16,7 @@ public:
     std::string video_path = this->declare_parameter<std::string>(
       "VIDEO_FILE_PATH", "/home/smx/NetworkShare/Video1_4.mp4");
     std::string image_topic = this->declare_parameter<std::string>(
-      "IMAGE_TOPIC", "TEST/GimbalCamera");
+      "IMAGE_TOPIC", "NoYamlRead/GimbalCamera");
     int publish_fps = this->declare_parameter<int>(
       "PUBLISH_FPS", 30);
 

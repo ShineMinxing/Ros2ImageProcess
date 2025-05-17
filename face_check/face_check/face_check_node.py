@@ -19,13 +19,13 @@ class FaceRecognitionNode(Node):
 
         # Declare and read parameters from the loaded YAML
         self.image_input_topic = self.declare_parameter(
-            'IMAGE_INPUT_TOPIC', '/TEST/GimbalCamera').value
+            'IMAGE_INPUT_TOPIC', '/NoYamlRead/GimbalCamera').value
         self.name_output_topic = self.declare_parameter(
-            'NAME_OUTPUT_TOPIC', '/TEST/TargetCategory').value
+            'NAME_OUTPUT_TOPIC', '/NoYamlRead/TargetCategory').value
         self.image_output_topic = self.declare_parameter(
-            'IMAGE_OUTPUT_TOPIC', '/TEST/TargetImage').value
+            'IMAGE_OUTPUT_TOPIC', '/NoYamlRead/TargetImage').value
         self.angle_output_topic = self.declare_parameter(
-            'ANGLE_OUTPUT_TOPIC', '/TEST/TargetImageAngle').value
+            'ANGLE_OUTPUT_TOPIC', '/NoYamlRead/TargetImageAngle').value
 
         self.fov_h = float(self.declare_parameter('FOV_H', 125.0).value)
         self.fov_v = float(self.declare_parameter('FOV_V',  69.0).value)

@@ -14,11 +14,11 @@ public:
   {
     // 声明并获取参数
     input_topic_ = this->declare_parameter<std::string>(
-      "IMAGE_INPUT_TOPIC", "/TEST/Go2Camera");
+      "IMAGE_INPUT_TOPIC", "/NoYamlRead/Go2Camera");
     output_image_topic_ = this->declare_parameter<std::string>(
-      "IMAGE_OUTPUT_TOPIC", "/TEST/TargetImage");
+      "IMAGE_OUTPUT_TOPIC", "/NoYamlRead/TargetImage");
     output_angle_topic_ = this->declare_parameter<std::string>(
-      "ANGLE_OUTPUT_TOPIC", "/TEST/TargetImageAngle");
+      "ANGLE_OUTPUT_TOPIC", "/NoYamlRead/TargetImageAngle");
     fov_h_ = this->declare_parameter<double>("FOV_H", 125.0);
     fov_v_ = this->declare_parameter<double>("FOV_V",  69.0);
 
