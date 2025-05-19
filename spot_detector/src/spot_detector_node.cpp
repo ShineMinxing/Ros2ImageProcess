@@ -50,13 +50,13 @@ private:
     if (frame.empty()) return;
 
     bool found = false;
-    int max_g = 0, mx=0, my=0;
+    int max_point = 0, mx=0, my=0;
     for (int y=0; y<height; ++y) {
       const uchar* row = frame.ptr<uchar>(y);
       for (int x=0; x<width; ++x) {
         int b=row[x*3], g=row[x*3+1], r=row[x*3+2];
-        if (g>200 && g>(r+50) && g>(b+50) && g>max_g) {
-          max_g=g; mx=x; my=y; found=true;
+        if (r>200 && r>(g+50) && r>(b+50) && r>max_point) {
+          max_point=r; mx=x; my=y; found=true;
         }
       }
     }
@@ -79,6 +79,8 @@ private:
       ang.data = {angle_x, angle_y, 0.0};
       angle_pub_->publish(ang);
     }
+    else 
+      video_pub_->publish(*msg);
   }
 
   // 参数

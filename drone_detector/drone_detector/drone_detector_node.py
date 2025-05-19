@@ -13,8 +13,8 @@ from PIL import Image as PILImage
 from ament_index_python.packages import get_package_share_directory
 
 class DroneInferenceNode(Node):
-    def __init__(self, options=None):
-        super().__init__('drone_detector_node', options=options)
+    def __init__(self):
+        super().__init__('drone_detector_node')
 
         # 读取参数
         self.image_input_topic = self.declare_parameter(
@@ -40,7 +40,7 @@ class DroneInferenceNode(Node):
         self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
         self.get_logger().info(f'Using device: {self.device}')
 
-        # 构建模型
+        # 加载模型
         share_dir = get_package_share_directory('drone_detector')
         model_path = os.path.join(share_dir, rel_model_path)
         self.model = self.load_model(model_path)
@@ -66,32 +66,37 @@ class DroneInferenceNode(Node):
         # 转 OpenCV
         cv_image = self.bridge.imgmsg_to_cv2(msg, desired_encoding='bgr8')
         h, w = cv_image.shape[:2]
+
         # 预处理
         img_rgb = cv2.cvtColor(cv_image, cv2.COLOR_BGR2RGB)
         pil = PILImage.fromarray(img_rgb)
         inp = self.data_transforms(pil).unsqueeze(0).to(self.device)
+
         # 推理
         with torch.no_grad():
             out = self.model(inp)[0].tolist()
         x_n, y_n, t_n = out
+
         # 还原坐标
-        sx, sy = w/256.0, h/256.0
-        x0, y0 = x_n*sx, y_n*sy
-        # 标记点
+        sx, sy = w / 256.0, h / 256.0
+        x0, y0 = x_n * sx, y_n * sy
         pt = (int(round(x0)), int(round(y0)))
-        cv2.circle(cv_image, pt, 10, (0,255,0), 2)
-        # 发布图像
+        cv2.circle(cv_image, pt, 10, (0, 255, 0), 2)
+
+        # 发布标记后图像
         img_msg = self.bridge.cv2_to_imgmsg(cv_image, encoding='bgr8')
         self.video_pub_.publish(img_msg)
+
         # 计算角度
-        dx = x0 - w/2.0
-        dy = y0 - h/2.0
-        rx = dx/(w/2.0)
-        ry = dy/(h/2.0)
-        ang_x = rx*(self.fov_h/2.0)
-        ang_y = ry*(self.fov_v/2.0)
-        tilt = t_n/180.0*math.pi
-        tilt_deg = tilt*(180.0/math.pi)
+        dx = x0 - w / 2.0
+        dy = y0 - h / 2.0
+        rx = dx / (w / 2.0)
+        ry = dy / (h / 2.0)
+        ang_x = rx * (self.fov_h / 2.0)
+        ang_y = ry * (self.fov_v / 2.0)
+        tilt = t_n / 180.0 * math.pi
+        tilt_deg = tilt * (180.0 / math.pi)
+
         # 发布角度
         a = Float64MultiArray()
         a.data = [float(ang_x), float(ang_y), float(tilt_deg)]
@@ -99,14 +104,16 @@ class DroneInferenceNode(Node):
 
 
 def main(args=None):
-    rclpy.init(args=args)
-    # 通过 NodeOptions 加载相对 config.yaml
-    opts = rclpy.node.NodeOptions()
-    opts.arguments([ '--ros-args', '--params-file', '/home/unitree/ros2_ws/LeggedRobot/src/Ros2ImageProcess/config.yaml' ])
-    node = DroneInferenceNode(options=opts)
+    # 通过 init 传入参数文件
+    param_file = '/home/unitree/ros2_ws/LeggedRobot/src/Ros2ImageProcess/config.yaml'
+    rclpy.init(args=['--ros-args', '--params-file', param_file])
+
+    node = DroneInferenceNode()
     rclpy.spin(node)
+
     node.destroy_node()
     rclpy.shutdown()
+
 
 if __name__ == '__main__':
     main()
