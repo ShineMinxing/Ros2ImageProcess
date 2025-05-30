@@ -87,6 +87,10 @@ class DroneInferenceNode(Node):
         img_msg = self.bridge.cv2_to_imgmsg(cv_image, encoding='bgr8')
         self.video_pub_.publish(img_msg)
 
+        self.get_logger().info(f"orig size: h={h}, w={w}")    
+        self.get_logger().info(f"model out: x_n={x_n:.4f}, y_n={y_n:.4f}, t_n={t_n:.4f}")
+        self.get_logger().info(f"pixel pt: {pt}")
+
         # 计算角度
         dx = x0 - w / 2.0
         dy = y0 - h / 2.0

@@ -1,4 +1,4 @@
-audio_play_node:
+video_play_node:
   ros__parameters:
     # 本地视频文件绝对或相对路径
     VIDEO_FILE_PATH: "/home/smx/NetworkShare/Video1_4.mp4"
