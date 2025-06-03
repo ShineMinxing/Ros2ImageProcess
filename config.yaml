@@ -1,7 +1,7 @@
 video_play_node:
   ros__parameters:
     # 本地视频文件绝对或相对路径
-    VIDEO_FILE_PATH: "/home/smx/NetworkShare/Video1_4.mp4"
+    VIDEO_FILE_PATH: "/home/unitree/WorkSpace/Video/Video2_3.mp4"
     # 发布的 Image 话题名称
     IMAGE_TOPIC: "SMX/GimbalCamera"
     # 发布帧率 (Hz)
