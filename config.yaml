@@ -3,14 +3,14 @@ video_play_node:
     # 本地视频文件绝对或相对路径
     VIDEO_FILE_PATH: "/home/unitree/WorkSpace/Video/Video2_3.mp4"
     # 发布的 Image 话题名称
-    IMAGE_TOPIC: "SMX/GimbalCamera"
+    IMAGE_TOPIC: "SMX/GimbalCamera_Raw"
     # 发布帧率 (Hz)
     PUBLISH_FPS: 30
 
 spot_detector_node:
   ros__parameters:
     # 输入图像话题
-    IMAGE_INPUT_TOPIC:  "/SMX/GimbalCamera"
+    IMAGE_INPUT_TOPIC:  "/SMX/GimbalCamera_Raw"
     # 标记后发布图像话题
     IMAGE_OUTPUT_TOPIC: "/SMX/TargetImage"
     # 发布角度信息的话题
@@ -22,7 +22,7 @@ spot_detector_node:
 face_check_node:
   ros__parameters:
     # 订阅的摄像头图像话题
-    IMAGE_INPUT_TOPIC: "/SMX/GimbalCamera"
+    IMAGE_INPUT_TOPIC: "/SMX/GimbalCamera_Raw"
     # 发布识别到的目标分类（人名）
     NAME_OUTPUT_TOPIC:  "/SMX/TargetCategory"
     # 发布标记后图像
@@ -40,7 +40,7 @@ face_check_node:
 drone_detector_node:
   ros__parameters:
     # 输入图像话题
-    IMAGE_INPUT_TOPIC: "/SMX/GimbalCamera"
+    IMAGE_INPUT_TOPIC: "/SMX/GimbalCamera_Raw"
     # 发布角度消息的话题
     ANGLE_OUTPUT_TOPIC: "/SMX/TargetImageAngle"
     # 发布标记后视频图像的话题
