@@ -1,23 +1,146 @@
-## ⚙️ 安装指南
+# Ros2ImageProcess 🖼️
 
-spot_detector使用狗头相机提取绿色光电，输出光电偏角，交给g1_control进行控制
-face_check使用吊舱相机识别人脸，输出光电偏角，交给g1_control进行控制
+[![License](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 
-- Use Ubuntu 22.04, ROS2 Humble
+**Ros2ImageProcess** 是基于 **ROS 2 Humble / Ubuntu 22.04** 的 **视觉处理与摄像头驱动仓库**，负责
+
+* 将 *IP Camera / USB Camera / 本地视频* 流快速封装为 ROS `sensor_msgs/Image`
+* 提供 *光点/人脸/无人机* 等多目标检测，并输出角度 (`SMX/TargetImageAngle`)
+* 支持离线 YOLOv5/v12、OpenCV face rec 与亮度阈值算法，无须外网即可运行
+
+---
+
+## ✨ 功能特性
+
+| 类别                   | 说明                                                                      |
+| -------------------- | ----------------------------------------------------------------------- |
+| **多源输入**             | `ip_camera`、`usb_camera`、`video_play` 三种节点；支持 RTSP、V4L2、MP4 文件          |
+| **实时检测**             | `spot_detector` 光点 / `face_check` 人脸 / `drone_detector` 无人机（YOLO 自训练权重） |
+| **角度输出**             | 根据相机视场角 (`FOV_H / FOV_V`) 计算目标偏角，发布 `SMX/TargetImageAngle`              |
+| **Raw & Compressed** | 同时发布 `*_Raw` 与 `*_Compressed` 话题，兼容低带宽传输                                |
+| **扩展友好**             | 任意新检测模型仅需订阅图像并发布角度即可，与下游控制逻辑解耦                                          |
+
+---
+
+## 🏗️ 生态仓库一览
+
+| 范畴            | 仓库                                                                                                   | 功能简介                  |
+| ------------- | ---------------------------------------------------------------------------------------------------- | --------------------- |
+| **底层驱动**      | [https://github.com/ShineMinxing/Ros2Go2Base](https://github.com/ShineMinxing/Ros2Go2Base)           | DDS 桥、Unitree SDK2 控制 |
+| **视觉处理 (本仓)** | **Ros2ImageProcess**                                                                                 | 摄像头驱动 + 目标检测          |
+| 里程计           | [https://github.com/ShineMinxing/Ros2Go2Estimator](https://github.com/ShineMinxing/Ros2Go2Estimator) | IMU‑足端‑编码器融合里程计       |
+| 语音 / LLM      | [https://github.com/ShineMinxing/Ros2Chat](https://github.com/ShineMinxing/Ros2Chat)                 | 离线 ASR + OpenAI Chat  |
+| 吊舱跟随          | [https://github.com/ShineMinxing/Ros2AmovG1](https://github.com/ShineMinxing/Ros2AmovG1)             | Amov G1 吊舱控制、目标跟踪     |
+| 工具集           | [https://github.com/ShineMinxing/Ros2Tools](https://github.com/ShineMinxing/Ros2Tools)               | 蓝牙 IMU、手柄映射、吊舱闭环      |
+
+> ⚠️ **按需克隆**：若只想用视觉功能，克隆本仓库即可，其它仓库均为可选。
+
+---
+
+## 📂 本仓库结构
+
+```
+Ros2ImageProcess/
+├── ip_camera/          # RTSP → Image             
+├── usb_camera/         # V4L2 → Image            
+├── video_play/         # MP4 → Image             
+├── spot_detector/      # 红/绿光点检测
+├── face_check/         # 人脸识别 + 角度           
+├── yolo_ros/           # YOLOv5/v12 推理
+├── drone_detector/     # 自训练无人机权重示例        
+├── config.yaml         # 全局参数
+└── Readme.md           # ← 你正在看
+```
+
+---
+
+## ⚙️ 关键参数 `config.yaml`
+
+| 节点                        | 关键参数                                | 默认值                        | 说明                     |
+| ------------------------- | ----------------------------------- | -------------------------- | ---------------------- |
+| **ip\_camera\_node**      | `IP_GSTREAMER`                      | 详见 yaml                    | 自定义 GStreamer Pipeline |
+| **usb\_camera\_node**     | `device_id / publish_fps`           | `4 / 30`                   | USB 摄像头编号 / 帧率         |
+| **video\_play\_node**     | `VIDEO_FILE_PATH / PUBLISH_FPS`     | `~/Video.mp4 / 30`         | 本地视频路径 / 发布帧率          |
+| **spot\_detector\_node**  | `IMAGE_INPUT_TOPIC / FOV_H / FOV_V` | `/SMX/Camera_Raw / 125/69` | 发布光点角度                 |
+| **face\_check\_node**     | `FACE_LIB_DIRS`                     | `other & local_file`       | 目录内图片即人脸库              |
+| **drone\_detector\_node** | `MODEL_REL_PATH`                    | `resource/drone_model.pth` | YOLO 权重                |
+
+---
+
+## 🛠️ 安装与编译
+
+> 已在 NV RTX‑40 系列台式机 & Jetson Orin 测试通过，如需 CUDA 推理请提前装好 TensorRT / CuDNN。
+
 ```bash
+# 1. 依赖
 sudo apt install -y ros-humble-cv-bridge ros-humble-image-transport \
                 ros-humble-vision-opencv python3-colcon-common-extensions \
-                python3-numpy python3-pip build-essential cmake  python3-dev \
+                python3-numpy python3-pip build-essential cmake python3-dev \
                 libopenblas-dev liblapack-dev libx11-dev libgtk-3-dev libjpeg-dev \
                 libgtk2.0-dev libavcodec-dev libavformat-dev libswscale-dev
 
-git clone https://github.com/davisking/dlib.git
-cd dlib
+# 可选：dlib + face_recognition
+git clone https://github.com/davisking/dlib.git && cd dlib
 mkdir build && cd build
 cmake .. -DDLIB_USE_CUDA=1 -DUSE_AVX_INSTRUCTIONS=1
-make -j4      # 根据你 Jetson 的核心数调整并行度
-sudo make install
-cd ../
-
+make -j$(nproc) && sudo make install
 pip3 install --user dlib==19.24.4 face_recognition==1.3.0 opencv-python
+
+# 2. clone & build
+cd ~/ros2_ws/LeggedRobot/src
+git clone --recursive https://github.com/ShineMinxing/Ros2ImageProcess.git
+cd .. && colcon build --packages-select ip_camera usb_camera video_play spot_detector face_check yolo_ros drone_detector
+source install/setup.bash
+
+# 3. 运行示例
+ros2 run ip_camera ip_camera_node   # 或 usb_camera_node / video_play_node
+ros2 run spot_detector spot_detector_node
 ```
+
+---
+
+## 📑 主要节点接口速查
+
+```text
+/ip_camera_node
+  • 输出  /SMX/Camera_Raw   sensor_msgs/Image (BGR)
+  • 输出  /SMX/Camera_Compressed sensor_msgs/CompressedImage
+
+/spot_detector_node
+  • 订阅  /SMX/Camera_Raw  Image
+  • 发布  /SMX/TargetImage Image (标记)
+  • 发布  /SMX/TargetImageAngle std_msgs/Float64MultiArray [yaw, pitch]
+
+/face_check_node   (同上，外加 /SMX/TargetCategory)
+/drone_detector_node (YOLO 推理)
+```
+
+---
+
+## 🎥 视频演示
+
+| 主题               | 点击图片观看                                                                                                                                |
+| ---------------- | ------------------------------------------------------------------------------------------------------------------------------------- |
+| 纯里程计建图 (站立/四足切换) | [![img](https://i1.hdslb.com/bfs/archive/4f60453cb37ce5e4f593f03084dbecd0fdddc27e.jpg)](https://www.bilibili.com/video/BV1UtQfYJExu)  |
+| 行走误差 0.5 %‑1 %   | [![img](https://i1.hdslb.com/bfs/archive/10e501bc7a93c77c1c3f41f163526b630b0afa3f.jpg)](https://www.bilibili.com/video/BV18Q9JYEEdn/) |
+| 爬楼梯高度误差 < 5 cm   | [![img](https://i0.hdslb.com/bfs/archive/c469a3dd37522f6b7dcdbdbb2c135be599eefa7b.jpg)](https://www.bilibili.com/video/BV1VV9ZYZEcH/) |
+| 380 m 距离偏差 3.3 % | [![img](https://i0.hdslb.com/bfs/archive/481731d2db755bbe087f44aeb3f48db29c159ada.jpg)](https://www.bilibili.com/video/BV1BhRAYDEsV/) |
+| 语音交互 + 地图导航      | [![img](https://i2.hdslb.com/bfs/archive/5b95c6eda3b6c9c8e0ba4124c1af9f3da10f39d2.jpg)](https://www.bilibili.com/video/BV1HCQBYUEvk/) |
+| 吊舱协同光点/人脸跟踪      | [![img](https://i0.hdslb.com/bfs/archive/5496e9d0b40915c62b69701fd1e23af7d6ffe7de.jpg)](https://www.bilibili.com/video/BV1faG1z3EFF/) |
+
+---
+
+## 📄 深入阅读
+
+* 技术原理笔记：[https://www.notion.so/Ros2Go2-1e3a3ea29e778044a4c9c35df4c27b22](https://www.notion.so/Ros2Go2-1e3a3ea29e778044a4c9c35df4c27b22)
+* ROS1 版本参考：[https://github.com/ShineMinxing/FusionEstimation](https://github.com/ShineMinxing/FusionEstimation)
+
+---
+
+## 📨 联系我们
+
+| 邮箱                                          | 单位           |
+| ------------------------------------------- | ------------ |
+| [401435318@qq.com](mailto:401435318@qq.com) | 中国科学院光电技术研究所 |
+
+> 📌 **本仓库仍在持续开发中** — 欢迎 Issue / PR 交流、贡献！

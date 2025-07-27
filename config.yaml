@@ -49,32 +49,18 @@ ip_camera_node:
     #   ! appsink sync=false max-buffers=1 drop=true
 
     # amd64 gpu4060 参数
-    # IP_GSTREAMER: >-
-    #   rtspsrc location=rtsp://192.168.123.64:554/H264
-    #   protocols=GST_RTSP_LOWER_TRANS_TCP
-    #   latency=150 drop-on-latency=false
-    #   ! queue max-size-buffers=0 max-size-bytes=0 max-size-time=0
-    #   ! rtph264depay
-    #   ! h264parse config-interval=-1
-    #   ! video/x-h264,stream-format=byte-stream,alignment=au
-    #   ! nvh264dec
-    #   ! videoconvert
-    #   ! video/x-raw,format=BGR
-    #   ! appsink sync=false max-buffers=1 drop=true
-
-    # CCTV 参数
-    # IP_GSTREAMER: >
-    #   rtspsrc location=rtsp://admin:smx19981123@192.168.1.63:554/Streaming/Channels/101
-    #     protocols=GST_RTSP_LOWER_TRANS_UDP latency=120 drop-on-latency=false
-    #   ! queue                               max-size-buffers=0 max-size-bytes=0 max-size-time=0
-    #   ! rtph264depay
-    #   ! h264parse                           config-interval=-1
-    #   ! video/x-h264,stream-format=byte-stream,alignment=au
-    #   ! nvh264dec
-    #   ! videoconvert
-    #   ! video/x-raw,format=BGR
-    #   ! appsink                             sync=false max-buffers=4 drop=true
-
+    IP_GSTREAMER: >-
+      rtspsrc location=rtsp://192.168.123.64:554/H264
+      protocols=GST_RTSP_LOWER_TRANS_TCP
+      latency=150 drop-on-latency=false
+      ! queue max-size-buffers=0 max-size-bytes=0 max-size-time=0
+      ! rtph264depay
+      ! h264parse config-interval=-1
+      ! video/x-h264,stream-format=byte-stream,alignment=au
+      ! nvh264dec
+      ! videoconvert
+      ! video/x-raw,format=BGR
+      ! appsink sync=false max-buffers=1 drop=true
 
     pub_camera_raw_enable: true
     pub_camera_compressed_enable: true
