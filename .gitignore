@@ -1,2 +1,2 @@
 face_check/local_file/
-/yolo_obb/resource/*.pt
+*.pt
