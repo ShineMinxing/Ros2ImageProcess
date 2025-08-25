@@ -94,14 +94,20 @@ video_play_node:
 
 yolo_obb_node:
   ros__parameters:
-    model_path: /home/unitree/ros2_ws/LeggedRobot/src/Ros2ImageProcess/yolo_obb/resource/best.pt
+    model_path: /home/unitree/ros2_ws/LeggedRobot/src/Ros2ImageProcess/yolo_obb/resource/yolo11m.pt
     image_topic: /SMX/Camera_Raw
     imgsz: 640
     conf: 0.25
     device: cuda:0
     half: true
     draw: true
-    output_image_topic: /SMX/YOLO
-    output_dets_topic:  /SMX/YOLO_Targets
+    target_names: ["person", "drone"] 
+    pitch_ratio_k: 0.4
+    uav_width_m: 0.45
+    fov_h_deg: 66.0
+    fov_v_deg: 66.0
+    output_image_topic: /SMX/TargetImage
+    gimbal_angle_topic: /SMX/GimbalState
+    output_obs_topic:  /SMX/YOLO_Targets
     # 订阅图像 QoS：reliable | best_effort | sensor
     image_qos: reliable
