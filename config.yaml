@@ -94,10 +94,10 @@ video_play_node:
 
 yolo_obb_node:
   ros__parameters:
-    model_path: /home/unitree/ros2_ws/LeggedRobot/src/Ros2ImageProcess/yolo_obb/resource/yolo11m.pt
+    model_path: /home/unitree/ros2_ws/LeggedRobot/src/Ros2ImageProcess/yolo_obb/resource/best.pt
     image_topic: /SMX/Camera_Raw
     imgsz: 640
-    conf: 0.25
+    conf: 0.2
     device: cuda:0
     half: true
     draw: true

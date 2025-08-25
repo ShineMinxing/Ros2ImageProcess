@@ -13,6 +13,7 @@ from std_msgs.msg import Float64MultiArray, MultiArrayDimension, MultiArrayLayou
 from cv_bridge import CvBridge
 from ultralytics import YOLO
 
+
 # 固定优先的参数文件（找不到会回退搜索）
 DEFAULT_CFG_ABS = "/home/unitree/ros2_ws/LeggedRobot/src/Ros2ImageProcess/config.yaml"
 
@@ -90,7 +91,7 @@ class YoloObbNode(Node):
         self.fov_h_deg           = float(gp('fov_h_deg').value)
         self.fov_v_deg           = float(gp('fov_v_deg').value)
         self.uav_width_m         = float(gp('uav_width_m').value)
-        self.pitch_ratio_k = float(gp('pitch_ratio_k').value)
+        self.pitch_ratio_k       = float(gp('pitch_ratio_k').value)
         self.gimbal_angle_topic  = str(gp('gimbal_angle_topic').value)
 
         # 读取 target_names，并统一成小写集合以便快速匹配
@@ -319,7 +320,7 @@ class YoloObbNode(Node):
 
                             eta_roll  = float(r_)  # 用规整后的滚转
                             ratio     = float(np.clip((H_proj - self.pitch_ratio_k * W_proj) / ((1 - self.pitch_ratio_k) * W_proj), -1.0, 1.0))
-                            eta_pitch = float(np.arcsin(ratio))
+                            eta_pitch = theta_A_k + float(np.arcsin(ratio))
                             obs_list.append([theta_A_k, theta_A_E, d_k, eta_roll, eta_pitch])
 
                             if self.draw:
