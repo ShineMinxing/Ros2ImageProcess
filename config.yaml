@@ -109,6 +109,6 @@ yolo_obb_node:
     fov_v_deg: 66.0
     gimbal_angle_topic: /SMX/GimbalState
     vehicle_angle_topic: /SMX/GimbalState
-    gimbal_location: [1.0,3.0,0.0]
+    gimbal_location: [0.0,0.0,0.0]
     output_image_topic: /SMX/TargetImage
     output_obs_topic:  /SMX/YOLO_Targets

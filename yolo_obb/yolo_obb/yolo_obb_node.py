@@ -324,7 +324,7 @@ class YoloObbNode(Node):
                             eta_roll  = float(r_)  # 用规整后的滚转
                             ratio     = float(np.clip((H_proj - self.pitch_ratio_k * W_proj) / ((1 - self.pitch_ratio_k) * W_proj), -1.0, 1.0))
                             eta_pitch = theta_A_k + float(np.arcsin(ratio))
-                            obs_list.append([theta_A_k, theta_A_E, d_k, eta_roll, eta_pitch])
+                            obs_list.append([theta_A_k, theta_A_E, d_k, eta_roll, eta_pitch, s])
 
                             if self.draw:
                                 # 画 OBB（蓝色、细线）
@@ -341,13 +341,6 @@ class YoloObbNode(Node):
                                 ]
                                 for i, txt in enumerate(lines):
                                     cv2.putText(cv_img, txt, (x0, y0 + i*DY), FONT, FS, BLUE, THK, cv2.LINE_AA)
-
-                                # 框外底部再标一次 类别+概率（可选）
-                                x, y, wbb, hbb = cv2.boundingRect(box)
-                                under_txt = f"{label} {s:.2f}"
-                                cv2.putText(cv_img, under_txt, (int(x), int(y + hbb + 14)),
-                                            FONT, FS, BLUE, THK, cv2.LINE_AA)
-
                 else:
                     self.get_logger().warn('结果中未发现 obb 字段')
 
@@ -359,7 +352,7 @@ class YoloObbNode(Node):
             obs = np.asarray(obs_list, dtype=np.float64)
             msg_obs = Float64MultiArray()
             msg_obs.layout = MultiArrayLayout(dim=[
-                MultiArrayDimension(label=f"location:{self.gimbal_location[0]},{self.gimbal_location[1]},{self.gimbal_location[2]}", size=obs.shape[0], stride=obs.shape[0]*5),
+                MultiArrayDimension(label=f"location:{self.gimbal_location[0]},{self.gimbal_location[1]},{self.gimbal_location[2]}", size=obs.shape[0], stride=obs.shape[0]*6),
             ])
             msg_obs.data = obs.ravel().tolist()
             self.pub_obs.publish(msg_obs)
