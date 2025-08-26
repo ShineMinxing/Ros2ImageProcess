@@ -66,8 +66,11 @@ class YoloObbNode(Node):
             # pitch 计算比例系数
             'pitch_ratio_k': 3.0,
 
-            # 云台角话题（std_msgs/Float64MultiArray），数据：[roll_deg, pitch_deg, yaw_deg, ...]
+            # 云台角话题
             'gimbal_angle_topic': 'SMX/GimbalState',
+            'vehicle_angle_topic':'SMX/GimbalState',
+
+            'gimbal_location': [0,0,0],
 
             # ★ 新增：要跟踪/输出的类别名（字符串数组）；为空表示不筛选
             'target_names': [],   # 例如 ["uav", "drone"]
@@ -80,37 +83,22 @@ class YoloObbNode(Node):
         gp = self.get_parameter
         self.model_path          = gp('model_path').value
         self.image_topic         = gp('image_topic').value
+        image_qos_mode           = str(gp('image_qos').value).strip().lower()
         self.imgsz               = int(gp('imgsz').value)
         self.conf                = float(gp('conf').value)
         self.device              = gp('device').value
         self.half                = bool(gp('half').value)
         self.draw                = bool(gp('draw').value)
-        self.output_image_topic  = gp('output_image_topic').value
-        self.output_obs_topic    = gp('output_obs_topic').value
-        image_qos_mode           = str(gp('image_qos').value).strip().lower()
+        self.target_names        = list(gp('target_names').value) 
+        self.pitch_ratio_k       = float(gp('pitch_ratio_k').value)
+        self.uav_width_m         = float(gp('uav_width_m').value)
         self.fov_h_deg           = float(gp('fov_h_deg').value)
         self.fov_v_deg           = float(gp('fov_v_deg').value)
-        self.uav_width_m         = float(gp('uav_width_m').value)
-        self.pitch_ratio_k       = float(gp('pitch_ratio_k').value)
         self.gimbal_angle_topic  = str(gp('gimbal_angle_topic').value)
-
-        # 读取 target_names，并统一成小写集合以便快速匹配
-        try:
-            raw_targets = gp('target_names').value  # 可能是 list/tuple/None/str
-            if isinstance(raw_targets, (list, tuple)):
-                self.target_names = {str(x).strip().lower() for x in raw_targets if str(x).strip()}
-            elif isinstance(raw_targets, str) and raw_targets.strip():
-                # 也兼容用逗号分隔的字符串
-                self.target_names = {t.strip().lower() for t in raw_targets.split(',') if t.strip()}
-            else:
-                self.target_names = set()
-        except Exception:
-            self.target_names = set()
-
-        if self.target_names:
-            self.get_logger().info(f"Filter target_names: {sorted(self.target_names)}")
-        else:
-            self.get_logger().info("Filter target_names: <none> (no filtering)")
+        self.vehicle_angle_topic = str(gp('vehicle_angle_topic').value)
+        self.gimbal_location     = [float(v) for v in gp('gimbal_location').value]
+        self.output_image_topic  = gp('output_image_topic').value
+        self.output_obs_topic    = gp('output_obs_topic').value
 
         # ---------------- 设备 ----------------
         if self.device.startswith('cuda') and torch.cuda.is_available():
@@ -155,11 +143,13 @@ class YoloObbNode(Node):
         self.roll_gimbal = 0.0
         self.pitch_gimbal = 0.0
         self.yaw_gimbal = 0.0
-        self.sub_gimbal = self.create_subscription(
-            Float64MultiArray, self.gimbal_angle_topic, self.cb_gimbal, 10
-        )
-        self.get_logger().info(f'Gimbal topic: {self.gimbal_angle_topic}')
+        self.sub_gimbal = self.create_subscription(Float64MultiArray, self.gimbal_angle_topic, self.cb_gimbal, 10)
 
+        self.roll_vehicle = 0.0
+        self.pitch_vehicle  = 0.0
+        self.yaw_vehicle  = 0.0
+        self.sub_vehicle = self.create_subscription(Float64MultiArray, self.vehicle_angle_topic, self.cb_vehicle, 10)
+        
         # ---------------- 发布者 ----------------
         self.pub_img  = self.create_publisher(Image,             self.output_image_topic, 10)
         self.pub_obs  = self.create_publisher(Float64MultiArray, self.output_obs_topic,   10)
@@ -199,6 +189,19 @@ class YoloObbNode(Node):
                 self.yaw_gimbal   = float(data[2]) * np.pi / 180.0
         except Exception as e:
             self.get_logger().warn(f'gimbal 数据异常: {e}')
+
+    # ---------------- 载具角回调 ----------------
+    def cb_vehicle(self, msg: Float64MultiArray):
+        """std_msgs/Float64MultiArray: [roll_deg, pitch_deg, yaw_deg, ...]；收不到就维持为 0。"""
+        data = msg.data
+        try:
+            if len(data) >= 3:
+                self.roll_vehicle  = float(data[0]) * np.pi / 180.0
+                self.pitch_vehicle = float(data[1]) * np.pi / 180.0
+                self.yaw_vehicle   = float(data[2]) * np.pi / 180.0
+        except Exception as e:
+            self.get_logger().warn(f'gimbal 数据异常: {e}')
+    
 
     # ---------------- 图像回调 ----------------
     @torch.inference_mode()
@@ -312,8 +315,8 @@ class YoloObbNode(Node):
                             W_proj, H_proj = self._proj_hw_from_box(box)
 
                             # --- 5个观测量 ---
-                            theta_A_k = self.yaw_gimbal   + ((2.0*cx*xi_H - W_H*xi_H) / (2.0*W_H))
-                            theta_A_E = self.pitch_gimbal - ((2.0*cy*xi_E - W_E*xi_E) / (2.0*W_E))
+                            theta_A_k = self.yaw_gimbal + self.yaw_vehicle + ((2.0*cx*xi_H - W_H*xi_H) / (2.0*W_H))
+                            theta_A_E = self.pitch_gimbal + self.pitch_vehicle- ((2.0*cy*xi_E - W_E*xi_E) / (2.0*W_E))
 
                             angle_pix = np.clip(W_proj * xi_H / W_H, 1e-6, np.pi/2 - 1e-6)
                             d_k       = float(self.uav_width_m / np.tan(angle_pix))
@@ -356,8 +359,7 @@ class YoloObbNode(Node):
             obs = np.asarray(obs_list, dtype=np.float64)
             msg_obs = Float64MultiArray()
             msg_obs.layout = MultiArrayLayout(dim=[
-                MultiArrayDimension(label='detections', size=obs.shape[0], stride=obs.shape[0]*5),
-                MultiArrayDimension(label='fields', size=5, stride=5)
+                MultiArrayDimension(label=f"location:{self.gimbal_location[0]},{self.gimbal_location[1]},{self.gimbal_location[2]}", size=obs.shape[0], stride=obs.shape[0]*5),
             ])
             msg_obs.data = obs.ravel().tolist()
             self.pub_obs.publish(msg_obs)

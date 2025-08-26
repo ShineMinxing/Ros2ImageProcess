@@ -96,6 +96,7 @@ yolo_obb_node:
   ros__parameters:
     model_path: /home/unitree/ros2_ws/LeggedRobot/src/Ros2ImageProcess/yolo_obb/resource/best.pt
     image_topic: /SMX/Camera_Raw
+    image_qos: reliable
     imgsz: 640
     conf: 0.2
     device: cuda:0
@@ -106,8 +107,8 @@ yolo_obb_node:
     uav_width_m: 0.45
     fov_h_deg: 66.0
     fov_v_deg: 66.0
-    output_image_topic: /SMX/TargetImage
     gimbal_angle_topic: /SMX/GimbalState
+    vehicle_angle_topic: /SMX/GimbalState
+    gimbal_location: [1.0,3.0,0.0]
+    output_image_topic: /SMX/TargetImage
     output_obs_topic:  /SMX/YOLO_Targets
-    # 订阅图像 QoS：reliable | best_effort | sensor
-    image_qos: reliable
