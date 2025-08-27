@@ -83,6 +83,15 @@ usb_camera_node:
     # 发布帧率 (Hz)
     publish_fps: 30
 
+usb_camera_node2:
+  ros__parameters:
+    # 摄像头设备号（如 /dev/video0 → 0）
+    device_id: 4
+    # 发布的话题名称
+    image_topic: "/SMX/Camera_Raw2"
+    # 发布帧率 (Hz)
+    publish_fps: 30
+
 video_play_node:
   ros__parameters:
     # 本地视频文件绝对或相对路径
@@ -105,10 +114,33 @@ yolo_obb_node:
     target_names: ["person", "drone"] 
     pitch_ratio_k: 0.4
     uav_width_m: 0.45
-    fov_h_deg: 66.0
-    fov_v_deg: 66.0
+    fov_h_deg: 60.0
+    fov_v_deg: 40.0
     gimbal_angle_topic: /SMX/GimbalState
     vehicle_angle_topic: /SMX/GimbalState
     gimbal_location: [0.0,0.0,0.0]
+    gimbal_orientation: [0.0,0.0,0.7853]
     output_image_topic: /SMX/TargetImage
+    output_obs_topic:  /SMX/YOLO_Targets
+
+yolo_obb_node2:
+  ros__parameters:
+    model_path: /home/unitree/ros2_ws/LeggedRobot/src/Ros2ImageProcess/yolo_obb/resource/best.pt
+    image_topic: /SMX/Camera_Raw2
+    image_qos: reliable
+    imgsz: 640
+    conf: 0.2
+    device: cuda:0
+    half: true
+    draw: true
+    target_names: ["person", "drone"] 
+    pitch_ratio_k: 0.4
+    uav_width_m: 0.45
+    fov_h_deg: 100.0
+    fov_v_deg: 75.0
+    gimbal_angle_topic: /SMX/GimbalState
+    vehicle_angle_topic: /SMX/GimbalState
+    gimbal_location: [0.0,1.8,0.0]
+    gimbal_orientation: [0.0,0.0,0.0]
+    output_image_topic: /SMX/TargetImage2
     output_obs_topic:  /SMX/YOLO_Targets

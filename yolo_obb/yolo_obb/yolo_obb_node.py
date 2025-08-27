@@ -1,3 +1,4 @@
+import sys
 import os
 from pathlib import Path
 import numpy as np
@@ -12,6 +13,9 @@ from sensor_msgs.msg import Image
 from std_msgs.msg import Float64MultiArray, MultiArrayDimension, MultiArrayLayout
 from cv_bridge import CvBridge
 from ultralytics import YOLO
+from geometry_msgs.msg import TransformStamped
+from tf2_ros import TransformBroadcaster
+import math
 
 
 # 固定优先的参数文件（找不到会回退搜索）
@@ -71,6 +75,7 @@ class YoloObbNode(Node):
             'vehicle_angle_topic':'SMX/GimbalState',
 
             'gimbal_location': [0,0,0],
+            'gimbal_orientation': [0,0,0],
 
             # ★ 新增：要跟踪/输出的类别名（字符串数组）；为空表示不筛选
             'target_names': [],   # 例如 ["uav", "drone"]
@@ -97,6 +102,7 @@ class YoloObbNode(Node):
         self.gimbal_angle_topic  = str(gp('gimbal_angle_topic').value)
         self.vehicle_angle_topic = str(gp('vehicle_angle_topic').value)
         self.gimbal_location     = [float(v) for v in gp('gimbal_location').value]
+        self.gimbal_orientation  = [float(v) for v in gp('gimbal_orientation').value]
         self.output_image_topic  = gp('output_image_topic').value
         self.output_obs_topic    = gp('output_obs_topic').value
 
@@ -139,10 +145,11 @@ class YoloObbNode(Node):
 
         # 图像与云台订阅
         self.sub = self.create_subscription(Image, self.image_topic, self.cb_image, image_qos)
+        self.tf_broadcaster = TransformBroadcaster(self)
 
-        self.roll_gimbal = 0.0
-        self.pitch_gimbal = 0.0
-        self.yaw_gimbal = 0.0
+        self.roll_gimbal = self.gimbal_orientation[0]
+        self.pitch_gimbal = self.gimbal_orientation[1]
+        self.yaw_gimbal = self.gimbal_orientation[2]
         self.sub_gimbal = self.create_subscription(Float64MultiArray, self.gimbal_angle_topic, self.cb_gimbal, 10)
 
         self.roll_vehicle = 0.0
@@ -177,6 +184,39 @@ class YoloObbNode(Node):
         W_proj = float(max(1.0, float(xs.max() - xs.min())))
         H_proj = float(max(1.0, float(ys.max() - ys.min())))
         return W_proj, H_proj
+    
+    def publish_gimbal_tf(self, stamp):
+        tf_msg = TransformStamped()
+        tf_msg.header.stamp = stamp
+        tf_msg.header.frame_id = "map"
+        tf_msg.child_frame_id  = self.get_name()  # 节点名作为 child frame
+
+        # 平移（米）——只用 location
+        tf_msg.transform.translation.x = float(self.gimbal_location[0])
+        tf_msg.transform.translation.y = float(self.gimbal_location[1])
+        tf_msg.transform.translation.z = float(self.gimbal_location[2])
+
+        # 姿态（弧度）——只用 orientation
+        roll  = float(self.gimbal_orientation[0])  # 绕X
+        pitch = float(self.gimbal_orientation[1])  # 绕Y
+        yaw   = float(self.gimbal_orientation[2])  # 绕Z
+
+        cr = math.cos(roll * 0.5);  sr = math.sin(roll * 0.5)
+        cp = math.cos(pitch* 0.5);  sp = math.sin(pitch* 0.5)
+        cy = math.cos(yaw  * 0.5);  sy = math.sin(yaw  * 0.5)
+
+        # 正确的四元数（x,y,z,w）
+        qx = sr*cp*cy - cr*sp*sy
+        qy = cr*sp*cy + sr*cp*sy
+        qz = cr*cp*sy - sr*sp*cy
+        qw = cr*cp*cy + sr*sp*sy
+
+        tf_msg.transform.rotation.x = qx
+        tf_msg.transform.rotation.y = qy
+        tf_msg.transform.rotation.z = qz
+        tf_msg.transform.rotation.w = qw
+
+        self.tf_broadcaster.sendTransform(tf_msg)
 
     # ---------------- 云台角回调 ----------------
     def cb_gimbal(self, msg: Float64MultiArray):
@@ -315,8 +355,11 @@ class YoloObbNode(Node):
                             W_proj, H_proj = self._proj_hw_from_box(box)
 
                             # --- 5个观测量 ---
-                            theta_A_k = self.yaw_gimbal + self.yaw_vehicle + ((2.0*cx*xi_H - W_H*xi_H) / (2.0*W_H))
-                            theta_A_E = self.pitch_gimbal + self.pitch_vehicle- ((2.0*cy*xi_E - W_E*xi_E) / (2.0*W_E))
+                            self.gimbal_orientation[0] = self.roll_gimbal + self.roll_vehicle
+                            self.gimbal_orientation[1] = self.pitch_gimbal + self.pitch_vehicle
+                            self.gimbal_orientation[2] = self.yaw_gimbal + self.yaw_vehicle
+                            theta_A_k = self.gimbal_orientation[2] + self.yaw_vehicle + ((2.0*cx*xi_H - W_H*xi_H) / (2.0*W_H))
+                            theta_A_E = self.gimbal_orientation[1] - ((2.0*cy*xi_E - W_E*xi_E) / (2.0*W_E))
 
                             angle_pix = np.clip(W_proj * xi_H / W_H, 1e-6, np.pi/2 - 1e-6)
                             d_k       = float(self.uav_width_m / np.tan(angle_pix))
@@ -363,18 +406,29 @@ class YoloObbNode(Node):
             img_msg.header = msg.header
             self.pub_img.publish(img_msg)
 
+        # 5) 发布tf变换
+        self.publish_gimbal_tf(msg.header.stamp)
+
+
 
 def main():
-    rclpy.init()
-    config_file = _guess_config_path()
-    cli_args = []
-    if Path(config_file).is_file():
-        cli_args = ['--ros-args', '--params-file', config_file]
-    else:
-        print(f"[yolo_obb_node] 警告：未找到配置文件：{config_file}，将使用节点内默认参数")
+    # 把用户传进来的 CLI 参数原样交给 rclpy（包含 remap、-p、--params-file 等）
+    rclpy.init(args=sys.argv)
 
-    node = YoloObbNode(cli_args=cli_args,
-                       automatically_declare_parameters_from_overrides=True)
+    # 如果用户没有明确传 --params-file，则注入默认配置（若存在）
+    inject_cli = []
+    if '--params-file' not in sys.argv:
+        default_cfg = _guess_config_path()
+        if Path(default_cfg).is_file():
+            inject_cli = ['--ros-args', '--params-file', default_cfg]
+        else:
+            print(f"[yolo_obb_node] 警告：未找到默认配置文件：{default_cfg}，使用节点内默认参数")
+
+    # 注意：这里把 inject_cli 传给 Node；用户自己的 CLI（通过 sys.argv）已经在 rclpy.init 里生效
+    node = YoloObbNode(
+        cli_args=inject_cli,
+        automatically_declare_parameters_from_overrides=True
+    )
     try:
         rclpy.spin(node)
     except KeyboardInterrupt:
@@ -383,7 +437,6 @@ def main():
         node.destroy_node()
         if rclpy.ok():
             rclpy.shutdown()
-
 
 if __name__ == '__main__':
     main()
