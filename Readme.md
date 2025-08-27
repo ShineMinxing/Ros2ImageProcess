@@ -7,6 +7,7 @@
 * 将 *IP Camera / USB Camera / 本地视频* 流快速封装为 ROS `sensor_msgs/Image`
 * 提供 *光点/人脸/无人机* 等多目标检测，并输出角度 (`SMX/TargetImageAngle`)
 * 支持离线 YOLOv5/v12、OpenCV face rec 与亮度阈值算法，无须外网即可运行
+* 支持离线 YOLOv5/v12、OpenCV face rec 与亮度阈值算法，无须外网即可运行
 
 ---
 
@@ -17,6 +18,7 @@
 | **多源输入**             | `ip_camera`、`usb_camera`、`video_play` 三种节点；支持 RTSP、V4L2、MP4 文件          |
 | **实时检测**             | `spot_detector` 光点 / `face_check` 人脸 / `drone_detector` 无人机（YOLO 自训练权重） |
 | **角度输出**             | 根据相机视场角 (`FOV_H / FOV_V`) 计算目标偏角，发布 `SMX/TargetImageAngle`              |
+| **TF 广播**             | yolo_obb 自动广播云台在 map 下的位姿（gimbal_location + gimbal_orientation）        |
 | **Raw & Compressed** | 同时发布 `*_Raw` 与 `*_Compressed` 话题，兼容低带宽传输                                |
 | **扩展友好**             | 任意新检测模型仅需订阅图像并发布角度即可，与下游控制逻辑解耦                                          |
 
@@ -46,7 +48,7 @@ Ros2ImageProcess/
 ├── video_play/         # MP4 → Image             
 ├── spot_detector/      # 红/绿光点检测
 ├── face_check/         # 人脸识别 + 角度           
-├── yolo_ros/           # YOLOv5/v12 推理
+├── yolo_obb/           # YOLOv11-OBB 推理 + 观测数组 + TF
 ├── drone_detector/     # 自训练无人机权重示例        
 ├── config.yaml         # 全局参数
 └── Readme.md           # ← 你正在看
@@ -58,12 +60,12 @@ Ros2ImageProcess/
 
 | 节点                        | 关键参数                                | 默认值                        | 说明                     |
 | ------------------------- | ----------------------------------- | -------------------------- | ---------------------- |
-| **ip\_camera\_node**      | `IP_GSTREAMER`                      | 详见 yaml                    | 自定义 GStreamer Pipeline |
-| **usb\_camera\_node**     | `device_id / publish_fps`           | `4 / 30`                   | USB 摄像头编号 / 帧率         |
-| **video\_play\_node**     | `VIDEO_FILE_PATH / PUBLISH_FPS`     | `~/Video.mp4 / 30`         | 本地视频路径 / 发布帧率          |
-| **spot\_detector\_node**  | `IMAGE_INPUT_TOPIC / FOV_H / FOV_V` | `/SMX/Camera_Raw / 125/69` | 发布光点角度                 |
-| **face\_check\_node**     | `FACE_LIB_DIRS`                     | `other & local_file`       | 目录内图片即人脸库              |
-| **drone\_detector\_node** | `MODEL_REL_PATH`                    | `resource/drone_model.pth` | YOLO 权重                |
+| **ip\_camera\_node**      | `IP_GSTREAMER`                      | 详见 yaml                   | 自定义 GStreamer Pipeline |
+| **usb\_camera\_node**     | `device_id / publish_fps`           | `4 / 30`                   | USB 摄像头编号 / 帧率       |
+| **video\_play\_node**     | `VIDEO_FILE_PATH / PUBLISH_FPS`     | `~/Video.mp4 / 30`         | 本地视频路径 / 发布帧率      |
+| **spot\_detector\_node**  | `IMAGE_INPUT_TOPIC / FOV_H / FOV_V` | `/SMX/Camera_Raw / 125/69` | 发布光点角度                |
+| **face\_check\_node**     | `FACE_LIB_DIRS`                     | `other & local_file`       | 目录内图片即人脸库           |
+| **yolo\_obb\_node**       | `model_path`                        | `best.pt`                  | YOLO 权重                |
 
 ---
 
@@ -95,6 +97,7 @@ source install/setup.bash
 # 3. 运行示例
 ros2 run ip_camera ip_camera_node   # 或 usb_camera_node / video_play_node
 ros2 run spot_detector spot_detector_node
+ros2 run yolo_obb yolo_obb_node
 ```
 
 ---
@@ -112,7 +115,12 @@ ros2 run spot_detector spot_detector_node
   • 发布  /SMX/TargetImageAngle std_msgs/Float64MultiArray [yaw, pitch]
 
 /face_check_node   (同上，外加 /SMX/TargetCategory)
-/drone_detector_node (YOLO 推理)
+
+/yolo_obb_node
+  • 订阅  /camera/image_raw  Image
+  • 发布  /yolo/annotated   Image (叠加 OBB)
+  • 发布  /SMX/YOLO_Obs     Float64MultiArray (N×6观测: 方位角,俯仰角,距离,roll,pitch,置信度)
+  • 广播  TF: map -> 节点名 (使用 gimbal_location & gimbal_orientation)
 ```
 
 ---
@@ -127,11 +135,13 @@ ros2 run spot_detector spot_detector_node
 | 380 m 距离偏差 3.3 % | [![img](https://i0.hdslb.com/bfs/archive/481731d2db755bbe087f44aeb3f48db29c159ada.jpg)](https://www.bilibili.com/video/BV1BhRAYDEsV/) |
 | 语音交互 + 地图导航      | [![img](https://i2.hdslb.com/bfs/archive/5b95c6eda3b6c9c8e0ba4124c1af9f3da10f39d2.jpg)](https://www.bilibili.com/video/BV1HCQBYUEvk/) |
 | 吊舱协同光点/人脸跟踪      | [![img](https://i0.hdslb.com/bfs/archive/5496e9d0b40915c62b69701fd1e23af7d6ffe7de.jpg)](https://www.bilibili.com/video/BV1faG1z3EFF/) |
+| 多图像源融合估计      | [![img](https://i1.hdslb.com/bfs/archive/68fa17f6b90c36137e32dc6553bb66b48c6836ea.jpg)](https://www.bilibili.com/video/BV13we1zEEED/) |
 
 ---
 
 ## 📄 深入阅读
 
+* 训练的yolo模型：[https://pan.quark.cn/s/c31e3ce92149](https://pan.quark.cn/s/c31e3ce92149)
 * 技术原理笔记：[https://www.notion.so/Ros2Go2-1e3a3ea29e778044a4c9c35df4c27b22](https://www.notion.so/Ros2Go2-1e3a3ea29e778044a4c9c35df4c27b22)
 * ROS1 版本参考：[https://github.com/ShineMinxing/FusionEstimation](https://github.com/ShineMinxing/FusionEstimation)
 
