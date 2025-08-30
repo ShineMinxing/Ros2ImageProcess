@@ -2,10 +2,10 @@
 <?xml-model href="http://download.ros.org/schema/package_format3.xsd" schematypens="http://www.w3.org/2001/XMLSchema"?>
 <package format="3">
   <name>yolo_obb</name>
-  <version>0.0.0</version>
-  <description>TODO: Package description</description>
+  <version>0.1.0</version>
+  <description>YOLOv11-OBB GPU inference ROS2 node with TF & RViz markers</description>
   <maintainer email="401435318@qq.com">unitree</maintainer>
-  <license>TODO: License declaration</license>
+  <license>MIT</license>
 
   <depend>rclpy</depend>
   <depend>sensor_msgs</depend>
@@ -14,7 +14,7 @@
   <depend>cv_bridge</depend>
   <depend>geometry_msgs</depend>
   <depend>tf2_ros</depend>
-
+  <depend>visualization_msgs</depend>
 
   <test_depend>ament_copyright</test_depend>
   <test_depend>ament_flake8</test_depend>
