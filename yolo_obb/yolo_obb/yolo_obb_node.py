@@ -10,6 +10,7 @@ from rclpy.qos import (
 )
 from sensor_msgs.msg import Image
 from std_msgs.msg import Float64MultiArray, MultiArrayDimension, MultiArrayLayout
+from nav_msgs.msg import Odometry
 from cv_bridge import CvBridge
 from ultralytics import YOLO
 from geometry_msgs.msg import TransformStamped
@@ -71,7 +72,7 @@ class YoloObbNode(Node):
 
             # 云台角话题
             'gimbal_angle_topic': 'SMX/GimbalState',
-            'vehicle_angle_topic':'SMX/GimbalState',
+            'vehicle_odom_topic':'SMX/GimbalState',
 
             # 位姿（弧度）
             'gimbal_location': [0.0, 0.0, 0.0],
@@ -106,7 +107,7 @@ class YoloObbNode(Node):
         self.fov_h_deg           = float(gp('fov_h_deg').value)
         self.fov_v_deg           = float(gp('fov_v_deg').value)
         self.gimbal_angle_topic  = str(gp('gimbal_angle_topic').value)
-        self.vehicle_angle_topic = str(gp('vehicle_angle_topic').value)
+        self.vehicle_odom_topic = str(gp('vehicle_odom_topic').value)
         self.gimbal_location     = [float(v) for v in gp('gimbal_location').value]
         self.gimbal_orientation  = [float(v) for v in gp('gimbal_orientation').value]
         self.output_image_topic  = gp('output_image_topic').value
@@ -168,7 +169,7 @@ class YoloObbNode(Node):
         self.roll_vehicle = 0.0
         self.pitch_vehicle  = 0.0
         self.yaw_vehicle  = 0.0
-        self.sub_vehicle = self.create_subscription(Float64MultiArray, self.vehicle_angle_topic, self.cb_vehicle, 10)
+        self.sub_vehicle = self.create_subscription(Odometry, self.vehicle_odom_topic, self.cb_vehicle, 10)
 
         # ---------------- 发布者 ----------------
         self.pub_img  = self.create_publisher(Image,             self.output_image_topic, 10)
@@ -206,6 +207,18 @@ class YoloObbNode(Node):
         qz = cr*cp*sy - sr*sp*cy
         qw = cr*cp*cy + sr*cp*sy
         return qx, qy, qz, qw
+    
+    def _rpy_from_quat(self, qx, qy, qz, qw):
+        t0 = 2.0 * (qw*qx + qy*qz)
+        t1 = 1.0 - 2.0 * (qx*qx + qy*qy)
+        roll = math.atan2(t0, t1)
+        t2 = 2.0 * (qw*qy - qz*qx)
+        t2 = 1.0 if t2 > 1.0 else (-1.0 if t2 < -1.0 else t2)
+        pitch = math.asin(t2)
+        t3 = 2.0 * (qw*qz + qx*qy)
+        t4 = 1.0 - 2.0 * (qy*qy + qz*qz)
+        yaw = math.atan2(t3, t4)
+        return roll, pitch, yaw
 
     def publish_gimbal_tf_and_marker(self, stamp):
         # 1) TF
@@ -277,21 +290,21 @@ class YoloObbNode(Node):
         try:
             if len(data) >= 3:
                 self.roll_gimbal  = float(data[0]) * np.pi / 180.0
-                self.pitch_gimbal = float(data[1]) * np.pi / 180.0
+                self.pitch_gimbal = - float(data[1]) * np.pi / 180.0
                 self.yaw_gimbal   = float(data[2]) * np.pi / 180.0
         except Exception as e:
             self.get_logger().warn(f'gimbal 数据异常: {e}')
 
     # ---------------- 载具角回调 ----------------
-    def cb_vehicle(self, msg: Float64MultiArray):
-        data = msg.data
-        try:
-            if len(data) >= 3:
-                self.roll_vehicle  = float(data[0]) * np.pi / 180.0
-                self.pitch_vehicle = float(data[1]) * np.pi / 180.0
-                self.yaw_vehicle   = float(data[2]) * np.pi / 180.0
-        except Exception as e:
-            self.get_logger().warn(f'gimbal 数据异常: {e}')
+    def cb_vehicle(self, msg: Odometry):
+        p = msg.pose.pose.position
+        self.gimbal_location = [float(p.x), float(p.y), float(p.z)]  # 用车辆位置驱动云台“基座”位置
+
+        q = msg.pose.pose.orientation
+        roll, pitch, yaw = self._rpy_from_quat(q.x, q.y, q.z, q.w)
+        self.roll_vehicle  = roll
+        self.pitch_vehicle = pitch
+        self.yaw_vehicle   = yaw
 
     # ---------------- 图像回调 ----------------
     @torch.inference_mode()

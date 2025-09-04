@@ -59,6 +59,20 @@ ip_camera_node:
       ! video/x-raw,format=BGR
       ! appsink sync=false max-buffers=1 drop=true
 
+    # # 监控摄像头 参数
+    # IP_GSTREAMER: >-
+    #   rtspsrc location=rtsp://192.168.123.8:554/H264
+    #   protocols=GST_RTSP_LOWER_TRANS_TCP
+    #   latency=150 drop-on-latency=false
+    #   ! queue max-size-buffers=0 max-size-bytes=0 max-size-time=0
+    #   ! rtph264depay
+    #   ! h264parse config-interval=-1
+    #   ! video/x-h264,stream-format=byte-stream,alignment=au
+    #   ! nvh264dec
+    #   ! videoconvert
+    #   ! video/x-raw,format=BGR
+    #   ! appsink sync=false max-buffers=1 drop=true
+
     pub_camera_raw_enable: true
     pub_camera_compressed_enable: true
 
@@ -117,7 +131,7 @@ yolo_obb_node:
     fov_h_deg: 60.0
     fov_v_deg: 40.0
     gimbal_angle_topic: /SMX/GimbalState
-    vehicle_angle_topic: /SMX/GimbalState
+    vehicle_odom_topic: /SMX/Odom
     gimbal_location: [-2.0,0.0,0.0]
     gimbal_orientation: [0.0,0.0,0.7853]
     output_image_topic: /SMX/TargetImage
@@ -125,7 +139,7 @@ yolo_obb_node:
 
     rviz_enable: true
     rviz_model:  "mesh"
-    rviz_scale: [0.01, 0.01, 0.01]
+    rviz_scale: [0.05, 0.05, 0.05]
     rviz_color: [0.1, 0.7, 1.0, 0.95]
     rviz_mesh_resource: "package://yolo_obb/resource/Telescope.stl"
     rviz_ns: "yolo_obb"
@@ -145,14 +159,41 @@ yolo_obb_node2:
     uav_width_m: 0.45
     fov_h_deg: 100.0
     fov_v_deg: 75.0
-    gimbal_angle_topic: /SMX/GimbalState
-    vehicle_angle_topic: /SMX/GimbalState
+    gimbal_angle_topic: /SMX/Gimbal_ATP1
+    vehicle_odom_topic: /SMX/Odom_ATP1
     gimbal_location: [0.0,1.8,0.0]
     gimbal_orientation: [0.0,0.0,0.0]
     output_image_topic: /SMX/TargetImage2
     output_obs_topic:  /SMX/YOLO_Targets
 
-    rviz_scale: [0.01, 0.01, 0.01]
+    rviz_scale: [0.05, 0.05, 0.05]
+    rviz_color: [0.1, 0.7, 1.0, 0.95]
+    rviz_mesh_resource: "package://yolo_obb/resource/Telescope.stl"
+    rviz_ns: "yolo_obb"
+
+yolo_obb_node3:
+  ros__parameters:
+    model_path: /home/unitree/ros2_ws/LeggedRobot/src/Ros2ImageProcess/yolo_obb/resource/best.pt
+    image_topic: /SMX/Camera_Raw3
+    image_qos: reliable
+    imgsz: 640
+    conf: 0.2
+    device: cuda:0
+    half: true
+    draw: true
+    target_names: ["person", "drone"] 
+    pitch_ratio_k: 0.4
+    uav_width_m: 0.45
+    fov_h_deg: 100.0
+    fov_v_deg: 75.0
+    gimbal_angle_topic: /SMX/Gimbal_ATP2
+    vehicle_odom_topic: /SMX/Odom_ATP2
+    gimbal_location: [0.0,1.8,0.0]
+    gimbal_orientation: [0.0,0.0,0.0]
+    output_image_topic: /SMX/TargetImage2
+    output_obs_topic:  /SMX/YOLO_Targets
+
+    rviz_scale: [0.05, 0.05, 0.05]
     rviz_color: [0.1, 0.7, 1.0, 0.95]
     rviz_mesh_resource: "package://yolo_obb/resource/Telescope.stl"
     rviz_ns: "yolo_obb"
