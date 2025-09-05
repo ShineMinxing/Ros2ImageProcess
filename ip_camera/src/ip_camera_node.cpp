@@ -37,7 +37,7 @@ public:
     }
     if (pub_camera_raw_enable_) {
       pub_camera_raw_ = this->create_publisher<sensor_msgs::msg::Image>(
-        topic_name + "_Raw", 10);
+        topic_name, 10);
     }
 
     // 打开 GStreamer 管线

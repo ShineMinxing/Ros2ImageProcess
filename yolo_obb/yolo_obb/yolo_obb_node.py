@@ -232,8 +232,8 @@ class YoloObbNode(Node):
         tf_msg.transform.translation.z = float(self.gimbal_location[2])
 
         roll  = float(self.gimbal_orientation[0])
-        pitch = float(self.gimbal_orientation[1])
-        yaw   = float(self.gimbal_orientation[2])
+        pitch = -float(self.gimbal_orientation[1])
+        yaw   = -float(self.gimbal_orientation[2])
         qx, qy, qz, qw = self._quat_from_rpy(roll, pitch, yaw)
 
         tf_msg.transform.rotation.x = qx
@@ -290,7 +290,7 @@ class YoloObbNode(Node):
         try:
             if len(data) >= 3:
                 self.roll_gimbal  = float(data[0]) * np.pi / 180.0
-                self.pitch_gimbal = - float(data[1]) * np.pi / 180.0
+                self.pitch_gimbal = float(data[1]) * np.pi / 180.0
                 self.yaw_gimbal   = float(data[2]) * np.pi / 180.0
         except Exception as e:
             self.get_logger().warn(f'gimbal 数据异常: {e}')
