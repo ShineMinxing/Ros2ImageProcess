@@ -166,9 +166,9 @@ class YoloObbNode(Node):
         self.yaw_gimbal = self.gimbal_orientation[2]
         self.sub_gimbal = self.create_subscription(Float64MultiArray, self.gimbal_angle_topic, self.cb_gimbal, 10)
 
-        self.roll_vehicle = 0.0
-        self.pitch_vehicle  = 0.0
-        self.yaw_vehicle  = 0.0
+        self.roll_vehicle  = 0.0
+        self.pitch_vehicle = 0.0
+        self.yaw_vehicle   = 0.0
         self.sub_vehicle = self.create_subscription(Odometry, self.vehicle_odom_topic, self.cb_vehicle, 10)
 
         # ---------------- 发布者 ----------------
@@ -232,8 +232,8 @@ class YoloObbNode(Node):
         tf_msg.transform.translation.z = float(self.gimbal_location[2])
 
         roll  = float(self.gimbal_orientation[0])
-        pitch = -float(self.gimbal_orientation[1])
-        yaw   = -float(self.gimbal_orientation[2])
+        pitch = float(self.gimbal_orientation[1])
+        yaw   = float(self.gimbal_orientation[2])
         qx, qy, qz, qw = self._quat_from_rpy(roll, pitch, yaw)
 
         tf_msg.transform.rotation.x = qx
@@ -274,10 +274,10 @@ class YoloObbNode(Node):
             path = 'file://' + path
         marker.mesh_resource = path
         marker.mesh_use_embedded_materials = True
-        marker.color.r = 0.5
-        marker.color.g = 0.5
-        marker.color.b = 0.5
-        marker.color.a = 0.95 
+        marker.color.r = float(self.rviz_color[0])
+        marker.color.g = float(self.rviz_color[1])
+        marker.color.b = float(self.rviz_color[2])
+        marker.color.a = float(self.rviz_color[3])
         marker.scale.x = float(self.rviz_scale[0])
         marker.scale.y = float(self.rviz_scale[1])
         marker.scale.z = float(self.rviz_scale[2])
@@ -404,10 +404,10 @@ class YoloObbNode(Node):
 
                             # --- 5个观测量 ---
                             self.gimbal_orientation[0] = self.roll_gimbal + self.roll_vehicle
-                            self.gimbal_orientation[1] = self.pitch_gimbal + self.pitch_vehicle
+                            self.gimbal_orientation[1] = -self.pitch_gimbal - self.pitch_vehicle
                             self.gimbal_orientation[2] = self.yaw_gimbal + self.yaw_vehicle
-                            theta_A_k = self.gimbal_orientation[2] + ((2.0*cx*xi_H - W_H*xi_H) / (2.0*W_H))
-                            theta_A_E = self.gimbal_orientation[1] - ((2.0*cy*xi_E - W_E*xi_E) / (2.0*W_E))
+                            theta_A_k = - self.gimbal_orientation[2] + ((2.0*cx*xi_H - W_H*xi_H) / (2.0*W_H))
+                            theta_A_E = - self.gimbal_orientation[1] - ((2.0*cy*xi_E - W_E*xi_E) / (2.0*W_E))
 
                             angle_pix = np.clip(W_proj * xi_H / W_H, 1e-6, np.pi/2 - 1e-6)
                             d_k       = float(self.uav_width_m / np.tan(angle_pix))

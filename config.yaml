@@ -128,11 +128,11 @@ yolo_obb_node:
     target_names: ["person", "drone"] 
     pitch_ratio_k: 0.4
     uav_width_m: 0.45
-    fov_h_deg: 75.0
-    fov_v_deg: 55.0
+    fov_h_deg: 66.0
+    fov_v_deg: 44.0
     gimbal_angle_topic: /SMX/GimbalState
-    vehicle_odom_topic: /SMX/Odom
-    gimbal_location: [0.0,0.0,0.0]
+    vehicle_odom_topic: /SMX/Odom_gimbal
+    gimbal_location: [0.0,0.0,0.52]
     gimbal_orientation: [0.0,0.0,0.0]
     output_image_topic: /SMX/TargetImage
     output_obs_topic:  /SMX/YOLO_Targets
@@ -140,7 +140,7 @@ yolo_obb_node:
     rviz_enable: true
     rviz_model:  "mesh"
     rviz_scale: [0.02, 0.02, 0.02]
-    rviz_color: [0.1, 0.7, 1.0, 0.95]
+    rviz_color: [0.0, 1.0, 0.5, 1.0] 
     rviz_mesh_resource: "package://yolo_obb/resource/Telescope.stl"
     rviz_ns: "yolo_obb"
 
@@ -161,13 +161,13 @@ yolo_obb_node2:
     fov_v_deg: 77.0
     gimbal_angle_topic: /SMX/Gimbal_ATP2
     vehicle_odom_topic: /SMX/Odom_ATP2
-    gimbal_location: [10.0,0.0,1.3]
-    gimbal_orientation: [0.0,0.0,0.78] #2.37 1.57
+    gimbal_location: [1.28945,0.0,0.82]
+    gimbal_orientation: [0.0,0.5235,1.57] #2.37 1.57 0.79
     output_image_topic: /SMX/TargetImage2
     output_obs_topic:  /SMX/YOLO_Targets
 
     rviz_scale: [0.02, 0.02, 0.02]
-    rviz_color: [0.1, 0.7, 1.0, 0.95]
+    rviz_color: [0.0, 1.0, 0.5, 1.0] 
     rviz_mesh_resource: "package://yolo_obb/resource/Telescope.stl"
     rviz_ns: "yolo_obb2"
 
@@ -188,12 +188,12 @@ yolo_obb_node3:
     fov_v_deg: 77.0
     gimbal_angle_topic: /SMX/Gimbal_ATP3
     vehicle_odom_topic: /SMX/Odom_ATP3
-    gimbal_location: [2.0,0.0,1.3]
-    gimbal_orientation: [0.0,0.0,2.37]
+    gimbal_location: [2.28945,0.0,0.86]
+    gimbal_orientation: [0.0,0.5235,2.37]
     output_image_topic: /SMX/TargetImage3
     output_obs_topic:  /SMX/YOLO_Targets
 
     rviz_scale: [0.02, 0.02, 0.02]
-    rviz_color: [0.1, 0.7, 1.0, 0.95]
+    rviz_color: [0.0, 1.0, 0.5, 1.0] 
     rviz_mesh_resource: "package://yolo_obb/resource/Telescope.stl"
     rviz_ns: "yolo_ob3"
