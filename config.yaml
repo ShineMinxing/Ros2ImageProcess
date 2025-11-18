@@ -12,7 +12,7 @@ drone_detector_node:
 face_check_node:
   ros__parameters:
     # 订阅的摄像头图像话题
-    IMAGE_INPUT_TOPIC: "/SMX/Camera_Raw"
+    IMAGE_INPUT_TOPIC: "/SMX/Camera_Raw2"
     # 发布识别到的目标分类（人名）
     NAME_OUTPUT_TOPIC:  "/SMX/TargetCategory"
     # 发布标记后图像
@@ -118,7 +118,7 @@ video_play_node:
 yolo_obb_node:
   ros__parameters:
     model_path: /home/unitree/ros2_ws/LeggedRobot/src/Ros2ImageProcess/yolo_obb/resource/best.pt
-    image_topic: /SMX/Camera_Raw
+    image_topic: /SMX/Camera_Raw2
     image_qos: reliable
     imgsz: 640
     conf: 0.3
@@ -132,7 +132,7 @@ yolo_obb_node:
     fov_v_deg: 44.0
     gimbal_angle_topic: /SMX/GimbalState
     vehicle_odom_topic: /SMX/Odom_gimbal
-    gimbal_location: [0.0,0.0,0.52]
+    gimbal_location: [0.0,0.0,0.34]
     gimbal_orientation: [0.0,0.0,0.0]
     output_image_topic: /SMX/TargetImage
     output_obs_topic:  /SMX/YOLO_Targets
@@ -157,11 +157,11 @@ yolo_obb_node2:
     target_names: ["person", "drone"] 
     pitch_ratio_k: 0.4
     uav_width_m: 0.45
-    fov_h_deg: 100.4
-    fov_v_deg: 77.0
+    fov_h_deg: 98.24
+    fov_v_deg: 67.1
     gimbal_angle_topic: /SMX/Gimbal_ATP2
     vehicle_odom_topic: /SMX/Odom_ATP2
-    gimbal_location: [1.28945,0.0,0.82]
+    gimbal_location: [0.0,-2.0,0.57]
     gimbal_orientation: [0.0,0.5235,1.57] #2.37 1.57 0.79
     output_image_topic: /SMX/TargetImage2
     output_obs_topic:  /SMX/YOLO_Targets
@@ -184,11 +184,11 @@ yolo_obb_node3:
     target_names: ["person", "drone"] 
     pitch_ratio_k: 0.4
     uav_width_m: 0.45
-    fov_h_deg: 100.4
-    fov_v_deg: 77.0
+    fov_h_deg: 98.24
+    fov_v_deg: 67.1
     gimbal_angle_topic: /SMX/Gimbal_ATP3
     vehicle_odom_topic: /SMX/Odom_ATP3
-    gimbal_location: [2.28945,0.0,0.86]
+    gimbal_location: [1.8,-2.0,0.60]
     gimbal_orientation: [0.0,0.5235,2.37]
     output_image_topic: /SMX/TargetImage3
     output_obs_topic:  /SMX/YOLO_Targets
