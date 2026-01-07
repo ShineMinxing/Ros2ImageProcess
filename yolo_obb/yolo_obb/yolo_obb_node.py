@@ -19,7 +19,7 @@ from visualization_msgs.msg import Marker
 import math
 
 # 固定优先的参数文件（找不到会回退搜索）
-DEFAULT_CFG_ABS = "/home/unitree/ros2_ws/LeggedRobot/src/Ros2ImageProcess/config.yaml"
+DEFAULT_CFG_ABS = "/home/smx/WorkSpace/GDS_LeggedRobot/src/Ros2ImageProcess/config.yaml"
 
 
 def _guess_config_path() -> str:
@@ -224,7 +224,7 @@ class YoloObbNode(Node):
         # 1) TF
         tf_msg = TransformStamped()
         tf_msg.header.stamp = stamp
-        tf_msg.header.frame_id = "map"
+        tf_msg.header.frame_id = "map_0"
         tf_msg.child_frame_id  = self.get_name()
 
         tf_msg.transform.translation.x = float(self.gimbal_location[0])
@@ -249,7 +249,7 @@ class YoloObbNode(Node):
 
         marker = Marker()
         marker.header.stamp = stamp
-        marker.header.frame_id = "map"
+        marker.header.frame_id = "map_0"
         marker.ns = self.rviz_ns
         marker.id = 1
         marker.action = Marker.ADD

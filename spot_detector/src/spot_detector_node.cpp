@@ -55,7 +55,7 @@ private:
       const uchar* row = frame.ptr<uchar>(y);
       for (int x=0; x<width; ++x) {
         int b=row[x*3], g=row[x*3+1], r=row[x*3+2];
-        if (r>200 && r>(g+50) && r>(b+50) && r>max_point) {
+        if (g>220 && g>(r+50) && g>(b+50) && r>max_point) {
           max_point=r; mx=x; my=y; found=true;
         }
       }
@@ -76,7 +76,7 @@ private:
 
       // 发布角度
       std_msgs::msg::Float64MultiArray ang;
-      ang.data = {angle_x, angle_y, 0.0};
+      ang.data = {angle_x/180*M_PI, angle_y/180*M_PI, 0.0};
       angle_pub_->publish(ang);
     }
     else 
@@ -100,7 +100,7 @@ int main(int argc, char ** argv)
   opts.arguments({
     "--ros-args",
     "--params-file",
-    "/home/unitree/ros2_ws/LeggedRobot/src/Ros2ImageProcess/config.yaml"
+    "/home/smx/WorkSpace/GDS_LeggedRobot/src/Ros2ImageProcess/config.yaml"
   });
   auto node = std::make_shared<SpotDetectorNode>(opts);
   rclcpp::spin(node);

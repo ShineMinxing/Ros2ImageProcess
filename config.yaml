@@ -31,7 +31,7 @@ face_check_node:
 ip_camera_node:
   ros__parameters:
     # 发布的 Image 话题名称
-    IP_Camera: "/SMX/Camera_Raw"
+    IP_Camera: "/SMX/Camera_Raw1"
 
     # Jetson Nano 参数
     # IP_GSTREAMER: >-
@@ -59,31 +59,17 @@ ip_camera_node:
       ! video/x-raw,format=BGR
       ! appsink sync=false max-buffers=1 drop=true
 
-    # # 监控摄像头 参数
-    # IP_GSTREAMER: >-
-    #   rtspsrc location=rtsp://192.168.123.8:554/H264
-    #   protocols=GST_RTSP_LOWER_TRANS_TCP
-    #   latency=150 drop-on-latency=false
-    #   ! queue max-size-buffers=0 max-size-bytes=0 max-size-time=0
-    #   ! rtph264depay
-    #   ! h264parse config-interval=-1
-    #   ! video/x-h264,stream-format=byte-stream,alignment=au
-    #   ! nvh264dec
-    #   ! videoconvert
-    #   ! video/x-raw,format=BGR
-    #   ! appsink sync=false max-buffers=1 drop=true
-
     pub_camera_raw_enable: true
     pub_camera_compressed_enable: false
 
 spot_detector_node:
   ros__parameters:
     # 输入图像话题
-    IMAGE_INPUT_TOPIC:  "/SMX/Camera_Raw"
+    IMAGE_INPUT_TOPIC:  "/SMX/Camera_Raw1"
     # 标记后发布图像话题
     IMAGE_OUTPUT_TOPIC: "/SMX/TargetImage"
     # 发布角度信息的话题
-    ANGLE_OUTPUT_TOPIC: "/SMX/TargetImageAngle"
+    ANGLE_OUTPUT_TOPIC: "/SMX/Drone_Target"
     # 水平和垂直视场（度）
     FOV_H: 125.0
     FOV_V:  69.0
@@ -100,7 +86,7 @@ usb_camera_node:
 usb_camera_node2:
   ros__parameters:
     # 摄像头设备号（如 /dev/video0 → 0）
-    device_id: 6
+    device_id: 0
     # 发布的话题名称
     image_topic: "/SMX/Camera_Raw3"
     # 发布帧率 (Hz)
@@ -117,8 +103,8 @@ video_play_node:
 
 yolo_obb_node:
   ros__parameters:
-    model_path: /home/unitree/ros2_ws/LeggedRobot/src/Ros2ImageProcess/yolo_obb/resource/best.pt
-    image_topic: /SMX/Camera_Raw2
+    model_path: /home/smx/WorkSpace/GDS_LeggedRobot/src/Ros2ImageProcess/yolo_obb/resource/best.pt
+    image_topic: /SMX/Camera_Raw1
     image_qos: reliable
     imgsz: 640
     conf: 0.3
@@ -134,8 +120,9 @@ yolo_obb_node:
     vehicle_odom_topic: /SMX/Odom_gimbal
     gimbal_location: [0.0,0.0,0.34]
     gimbal_orientation: [0.0,0.0,0.0]
-    output_image_topic: /SMX/TargetImage
-    output_obs_topic:  /SMX/YOLO_Targets
+    output_image_topic: /SMX/TargetImage1
+    # 消息格式： 观测点位置在label中，发布检测到的所有目标在data中，每个目标有对应的“相对于观测点的偏航角”、“相对于观测点的俯仰角”、“相对观测点的距离”、“图像中的滚转角”、“图像中的俯仰角”、“检测置信度”
+    output_obs_topic:  /SMX/Drone_Target 
 
     rviz_enable: true
     rviz_model:  "mesh"
@@ -146,7 +133,7 @@ yolo_obb_node:
 
 yolo_obb_node2:
   ros__parameters:
-    model_path: /home/unitree/ros2_ws/LeggedRobot/src/Ros2ImageProcess/yolo_obb/resource/best.pt
+    model_path: /home/smx/WorkSpace/GDS_LeggedRobot/src/Ros2ImageProcess/yolo_obb/resource/best.pt
     image_topic: /SMX/Camera_Raw2
     image_qos: reliable
     imgsz: 640
@@ -161,10 +148,10 @@ yolo_obb_node2:
     fov_v_deg: 67.1
     gimbal_angle_topic: /SMX/Gimbal_ATP2
     vehicle_odom_topic: /SMX/Odom_ATP2
-    gimbal_location: [0.0,-2.0,0.57]
-    gimbal_orientation: [0.0,0.5235,1.57] #2.37 1.57 0.79
+    gimbal_location: [-3.38,0.0,0.9]
+    gimbal_orientation: [0.0,0.5235,0.0] #2.37 1.57 0.79
     output_image_topic: /SMX/TargetImage2
-    output_obs_topic:  /SMX/YOLO_Targets
+    output_obs_topic:  /SMX/Drone_Target
 
     rviz_scale: [0.02, 0.02, 0.02]
     rviz_color: [0.0, 1.0, 0.5, 1.0] 
@@ -173,7 +160,7 @@ yolo_obb_node2:
 
 yolo_obb_node3:
   ros__parameters:
-    model_path: /home/unitree/ros2_ws/LeggedRobot/src/Ros2ImageProcess/yolo_obb/resource/best.pt
+    model_path: /home/smx/WorkSpace/GDS_LeggedRobot/src/Ros2ImageProcess/yolo_obb/resource/best.pt
     image_topic: /SMX/Camera_Raw3
     image_qos: reliable
     imgsz: 640
@@ -188,10 +175,10 @@ yolo_obb_node3:
     fov_v_deg: 67.1
     gimbal_angle_topic: /SMX/Gimbal_ATP3
     vehicle_odom_topic: /SMX/Odom_ATP3
-    gimbal_location: [1.8,-2.0,0.60]
-    gimbal_orientation: [0.0,0.5235,2.37]
+    gimbal_location: [-3.38,-1.97,0.85]
+    gimbal_orientation: [0.0,0.5235,0.79]
     output_image_topic: /SMX/TargetImage3
-    output_obs_topic:  /SMX/YOLO_Targets
+    output_obs_topic:  /SMX/Drone_Target
 
     rviz_scale: [0.02, 0.02, 0.02]
     rviz_color: [0.0, 1.0, 0.5, 1.0] 

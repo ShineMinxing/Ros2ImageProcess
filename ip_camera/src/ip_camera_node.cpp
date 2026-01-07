@@ -110,7 +110,7 @@ int main(int argc, char ** argv)
   // 如果使用参数文件：
   options.arguments({
     "--ros-args",
-    "--params-file", "/home/unitree/ros2_ws/LeggedRobot/src/Ros2ImageProcess/config.yaml"
+    "--params-file", "/home/smx/WorkSpace/GDS_LeggedRobot/src/Ros2ImageProcess/config.yaml"
   });
   auto node = std::make_shared<IPCameraNode>(options);
   rclcpp::spin(node);

@@ -73,7 +73,7 @@ int main(int argc, char ** argv)
   options.arguments({
     "--ros-args",
     "--params-file",
-    "/home/unitree/ros2_ws/LeggedRobot/src/Ros2ImageProcess/config.yaml"
+    "/home/smx/WorkSpace/GDS_LeggedRobot/src/Ros2ImageProcess/config.yaml"
   });
   auto node = std::make_shared<VideoPlayNode>(options);
   rclcpp::spin(node);

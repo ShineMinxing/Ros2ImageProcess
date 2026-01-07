@@ -74,7 +74,7 @@ int main(int argc, char ** argv)
 
   // 你的默认参数文件（不存在就不加）
   const std::string default_yaml =
-      "/home/unitree/ros2_ws/LeggedRobot/src/Ros2ImageProcess/config.yaml";
+      "/home/smx/WorkSpace/GDS_LeggedRobot/src/Ros2ImageProcess/config.yaml";
 
   rclcpp::NodeOptions options;
 
